@@ -18,7 +18,11 @@
 		var image = document.getElementById(obj);
 		//将原图画在canvas上
 		var canvas = document.getElementById('original-canvas');
-		var context = canvas.getContext('2d');
+		try {
+			var context = canvas.getContext('2d');
+		} catch(e) {
+			alert("你的浏览器版本太低啦，请使用Chrome，火狐或者IE9及其以上的浏览器");
+		}
 		var height = image.height;
 		var width = image.width;
 		context.drawImage(image, 0, 0, width, height);
@@ -59,11 +63,7 @@
 			for (var i = 0; i < height; ++i) {
 				tempRow = [];
 				for (var j = 0; j < width; ++j) {
-					try {
-						tempRow[j] = this.matrixData[parseInt(i*scalingH)][parseInt(j*scalingW)];
-					} catch(e) {
-						console.log(e);
-					}
+					tempRow[j] = this.matrixData[parseInt(i*scalingH)][parseInt(j*scalingW)];
 				}
 				resultMatrix[i] = tempRow;
 			}
@@ -95,11 +95,7 @@
 					if (w2 >= this.width) {
 						w2 -= 1;
 					}
-					try {
-						tempRow[j] = (1-u)*(1-v)*this.matrixData[h1][w1] + (1-u)*v*this.matrixData[h1][w2] + (1-v)*u*this.matrixData[h2][w1] + u*v*this.matrixData[h2][w2];
-					} catch(e) {
-						console.log(e + " " + h2)
-					}
+					tempRow[j] = (1-u)*(1-v)*this.matrixData[h1][w1] + (1-u)*v*this.matrixData[h1][w2] + (1-v)*u*this.matrixData[h2][w1] + u*v*this.matrixData[h2][w2];
 				}
 				resultMatrix[i] = tempRow;
 			}

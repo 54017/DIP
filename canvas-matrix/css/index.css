@@ -2,6 +2,11 @@
 	overflow: auto;
 }
 
+.hide {
+	visibility: hidden;
+	position: absolute;
+}
+
 div.control {
 	overflow: hidden;
 }
