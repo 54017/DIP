@@ -184,6 +184,7 @@
 			}
 			first.style.display = 'none';
 			second.style.display = 'none';
+			gray.style.display = 'block';
 			gray.appendChild(result);
 		})							
 	}
