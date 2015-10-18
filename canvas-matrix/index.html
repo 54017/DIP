@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+    <meta name="keywords" content="JS图像处理"/>
+    <meta name="description" content="通过canvas进行模拟矩阵的图像变换" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0">
+	<title>图像处理</title>
+	<link rel="stylesheet" type="text/css" href="css/index.css">
+</head>
+<body>
+	<div id="wrapper">
+        <img id="original-image" src="images/29.png" style="display:none">
+        <div class="control">
+            <div class="original">
+                <h2>原图</h2>
+                <canvas id="original-canvas" width="384" height="256"></canvas>
+            </div>
+            <div id="button-group-scale">
+                <h3>图像缩放</h3>
+                <button type="button" data-width='192' data-height='128'>192*128</button>
+                <button type="button" data-width='96' data-height='64'>96*64</button>
+                <button type="button" data-width='48' data-height='32'>48*32</button>
+                <button type="button" data-width='24' data-height='16'>24*16</button>
+                <button type="button" data-width='12' data-height='8'>12*8</button>
+                <button type="button" data-width='300' data-height='200'>300*200</button>
+                <button type="button" data-width='450' data-height='300'>450*300</button>
+                <button type="button" data-width='500' data-height='200'>500*200</button>
+                <div class="personal">
+                    宽：<input id="input-width" type="text" />
+                    高：<input id="input-height" type="text" />
+                    <button id="submit" type="button">提交</button>
+                </div>
+            </div>
+            <div id="button-group-gray">
+                <h3>灰度level</h3>
+                <button type="button" data-level='128'>128</button>
+                <button type="button" data-level='32'>32</button>
+                <button type="button" data-level='8'>8</button>
+                <button type="button" data-level='4'>4</button>
+                <button type="button" data-level='2'>2</button>
+            </div>
+        </div>
+        <div id="first">
+            <h3>最近邻插值算法</h3>
+        </div>
+        <div id="second">
+            <h3>双线性插值法</h3>
+        </div>
+        <div id="gray">
+            <h3>灰度</h3>
+        </div>
+    </div>
+	<script type="text/javascript" src="js/index.js"></script>
+</body>
+</html>
