@@ -28,6 +28,7 @@
 		var width = image.width;
 		canvas.setAttribute('width', width);
 		canvas.setAttribute('height', height);
+		console.log(width + " " + height + " " + image.src);
 		context.drawImage(image, 0, 0, width, height);
 		try {
 			var rawData = context.getImageData(0, 0, width, height).data;
@@ -195,7 +196,9 @@
 		//本地预览
 		Util.addHandler(oFReader, 'load', function(e) {
 			document.getElementById("original-image").src = e.target.result;
-			original = readImage('original-image');
+			setTimeout(function() {
+				original = readImage('original-image');
+			}, 10);
 		})
 
 		//上传文件事件
