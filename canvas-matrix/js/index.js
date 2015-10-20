@@ -14,7 +14,7 @@
 
 	var original, wrapper = document.getElementById('wrapper'), first = document.getElementById('first'), second = document.getElementById('second'), gray = document.getElementById('gray'), oFReader = new FileReader();
 	
-	var readImage = function(obj) {
+	var readImage = function(obj, level) {
 		var image = document.getElementById(obj);
 		//将原图画在canvas上
 		var canvas = document.getElementById('original-canvas');
@@ -28,33 +28,29 @@
 		var width = image.width;
 		canvas.setAttribute('width', width);
 		canvas.setAttribute('height', height);
-		console.log(width + " " + height + " " + image.src);
 		context.drawImage(image, 0, 0, width, height);
 		try {
-			var rawData = context.getImageData(0, 0, width, height).data;
+			rawData = context.getImageData(0, 0, width, height).data;
 		} catch(e) {
 			document.getElementById('message').style.display = 'block';
 			wrapper.style.display = 'none';
 		}
-		//转化为常见的灰度矩阵形式
-		var a = [];
+		//转化为常见的矩阵形式
 		var b = [];
+		var tempStart, num = 4*width;
 		for (var i = 0; i < height; ++i) {
-			a = [];
-			for (var j = 0; j < width; ++j) {
-				a.push(0.299*rawData[4*i*width + 4*j] + 0.587*rawData[4*i*width + 4*j + 1] + 0.114*rawData[4*i*width + 4*j + 2])    //RGB转灰度
-			}
-			b[i] = a;
+		    tempStart = i*num;
+			b[i] = Array.prototype.slice.call(rawData, tempStart, tempStart + num);
 		}
-		return new imageProcessor(image, b);
+		return new imageProcessor(image, b, level);
 	}
 
 	//读取图片进行初始化处理
-	var imageProcessor = function(obj, matrixData) {
+	var imageProcessor = function(obj, matrixData, level) {
 		this.image = obj;
 		this.width = obj.width;
 		this.height = obj.height;
-		this.level = 256;
+		this.level = typeof level !== 'undefined' ? level : 256;
 		//二维灰度矩阵
 		this.matrixData = matrixData;
 	}
@@ -69,14 +65,20 @@
 			var scalingH = this.height/height;
 			var resultMatrix = []; //目标图像灰度矩阵
 			var tempRow = [];     //每一行的数组
+			var rowNum, colNum;
 			for (var i = 0; i < height; ++i) {
 				tempRow = [];
+				rowNum = parseInt(i*scalingH);
 				for (var j = 0; j < width; ++j) {
-					tempRow[j] = this.matrixData[parseInt(i*scalingH)][parseInt(j*scalingW)];
+					colNum = 4*parseInt(j*scalingW);
+					tempRow[4*j] = this.matrixData[rowNum][colNum];           //R
+					tempRow[4*j + 1] = this.matrixData[rowNum][colNum + 1];   //G
+					tempRow[4*j + 2] = this.matrixData[rowNum][colNum + 2];	  //B
+					tempRow[4*j + 3] = this.matrixData[rowNum][colNum + 3];	  //A
 				}
 				resultMatrix[i] = tempRow;
 			}
-			return this.grayToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
 		},
 		//双线性插值法
 		scaleSecond: function(width, height) {
@@ -86,29 +88,36 @@
 			var scalingH = this.height/height;
 			var resultMatrix = []; //目标图像灰度矩阵
 			var tempRow = [];     //每一行的数组
-			var virtualSrcH, virtualSrcW, h1, h2, w1, w2, u, v;
+			var virtualSrcH, virtualSrcW, h1, h2, w1, w2, u, v, first, second, third, fourth;
 			for (var i = 0; i < height; ++i) {
 				tempRow = [];
+				virtualSrcH = i*scalingH;
+				h1 = parseInt(virtualSrcH);
+				h2 = h1 + 1;
+				u = virtualSrcH - h1;
+				if (h2 >= this.height) {
+						h2 -= 1;
+				}
 				for (var j = 0; j < width; ++j) {
-					virtualSrcH = i*scalingH;
 					virtualSrcW = j*scalingW;
-					h1 = parseInt(virtualSrcH);
-					h2 = h1 + 1;
 					w1 = parseInt(virtualSrcW);
 					w2 = w1 + 1;
-					u = virtualSrcH - h1;
 					v = virtualSrcW - w1;
-					if (h2 >= this.height) {
-						h2 -= 1;
-					}
 					if (w2 >= this.width) {
 						w2 -= 1;
 					}
-					tempRow[j] = (1-u)*(1-v)*this.matrixData[h1][w1] + (1-u)*v*this.matrixData[h1][w2] + (1-v)*u*this.matrixData[h2][w1] + u*v*this.matrixData[h2][w2];
+					first = (1-u)*(1-v);
+					second = (1-u)*v;
+					third = (1-v)*u;
+					fourth = u*v;
+					tempRow[4*j] = first*this.matrixData[h1][4*w1] + second*this.matrixData[h1][4*w2] + third*this.matrixData[h2][4*w1] + fourth*this.matrixData[h2][4*w2];
+					tempRow[4*j + 1] = first*this.matrixData[h1][4*w1 + 1] + second*this.matrixData[h1][4*w2 + 1] + third*this.matrixData[h2][4*w1 + 1] + fourth*this.matrixData[h2][4*w2 + 1];
+					tempRow[4*j + 2] = first*this.matrixData[h1][4*w1 + 2] + second*this.matrixData[h1][4*w2 + 2] + third*this.matrixData[h2][4*w1 + 2] + fourth*this.matrixData[h2][4*w2 + 2];
+					tempRow[4*j + 3] = tempRow[4*j + 3] = first*this.matrixData[h1][4*w1 + 3] + second*this.matrixData[h1][4*w2 + 3] + third*this.matrixData[h2][4*w1 + 3] + fourth*this.matrixData[h2][4*w2 + 3];
 				}
 				resultMatrix[i] = tempRow;
 			}
-			return this.grayToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
 		},
 		//三次卷积法
 		scaleThird: function() {
@@ -118,29 +127,35 @@
 			var spacing = parseInt((this.level)/level);
 			var d = parseInt((this.level - 1)/(level - 1)); //就是等差数列里面的d
 			var resultMatrix = [];
-			var tempRow = [];
+			var tempRow = [], gray, num, level = this.level;
 			for (var i = this.height - 1; i >= 0; --i) {
 				tempRow = [];
 				for (var j = this.width - 1; j >= 0; --j) {
-					tempRow[j] = parseInt(this.matrixData[i][j]/spacing)*d;
+					gray = this.matrixData[i][4*j]*0.299 + this.matrixData[i][4*j + 1]*0.587 + this.matrixData[i][4*j + 2] *0.114;
+					num = parseInt(gray/spacing)*d;
+					tempRow[4*j] = num;
+					tempRow[4*j + 1] = num;
+					tempRow[4*j + 2] = num;
+					tempRow[4*j + 3] = level;
 				}
 				resultMatrix[i] = tempRow;
 			}
-			return this.grayToRGB(resultMatrix, this.width, this.height);
+			return this.draw(resultMatrix, this.width, this.height);
 		},
-		grayToRGB: function(grayMatrix, width, height) {
+		draw: function(matrix, width, height) {
 			var canvas = document.createElement('canvas');
 			canvas.width = width;
 			canvas.height = height;
 			var ctx = canvas.getContext('2d');
 			var resultImg = ctx.createImageData(width, height);
+			var tempStart, num = 4*width;
 			for (var i = 0; i < height; ++i) {
+				tempStart = i*num;
 				for (var j = 0; j < width; ++j) {
-					var temp = grayMatrix[i][j];
-					resultImg.data[4*i*width + 4*j] = temp;
-					resultImg.data[4*i*width + 4*j + 1] = temp;
-					resultImg.data[4*i*width + 4*j + 2] = temp;
-					resultImg.data[4*i*width + 4*j + 3] = 255;
+					resultImg.data[tempStart + 4*j] = matrix[i][4*j];
+					resultImg.data[tempStart + 4*j + 1] = matrix[i][4*j + 1];
+					resultImg.data[tempStart + 4*j + 2] = matrix[i][4*j + 2];
+					resultImg.data[tempStart + 4*j + 3] = matrix[i][4*j + 3];
 				}
 			}
 			ctx.putImageData(resultImg, 0, 0)
