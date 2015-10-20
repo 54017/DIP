@@ -12,8 +12,14 @@
         }
      };
 
-	var original, wrapper = document.getElementById('wrapper'), first = document.getElementById('first'), second = document.getElementById('second'), gray = document.getElementById('gray'), oFReader = new FileReader();
+	var original, wrapper = document.getElementById('wrapper'), first = document.getElementById('first'), second = document.getElementById('second'), gray = document.getElementById('gray');
 	
+	try {
+		var oFReader = new FileReader();
+	} catch(e) {
+		alert("你的浏览器版本太低啦，请使用Chrome，Safari，火狐或者IE10及其以上的浏览器");
+		return;
+	}
 	var readImage = function(obj, level) {
 		var image = document.getElementById(obj);
 		//将原图画在canvas上
@@ -21,7 +27,7 @@
 		try {
 			var context = canvas.getContext('2d');
 		} catch(e) {
-			alert("你的浏览器版本太低啦，请使用Chrome，Safari，火狐或者IE9及其以上的浏览器");
+			alert("你的浏览器版本太低啦，请使用Chrome，Safari，火狐或者IE10及其以上的浏览器");
 			return;
 		}
 		var height = image.height;
