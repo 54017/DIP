@@ -9,12 +9,18 @@
 	<link rel="stylesheet" type="text/css" href="css/index.css">
 </head>
 <body>
+    <div id="message" class="nothing">
+        出于安全原因，Chrome，360等浏览器没有操作本地文件的权限，因此无法读出图片的像素具体信息，所以请用火狐，Safari或者IE9及其以上的浏览器打开本地文件，如果没有这些浏览器也不要紧，请访问 <a href="http://54017.github.io/DIP/canvas-matrix/">线上地址</a>
+    </div>
 	<div id="wrapper">
         <img class="hide" id="original-image" src="images/29.png">
         <div class="control">
             <div class="original">
-                <h2>原图</h2>
-                <canvas id="original-canvas" width="384" height="256"></canvas>
+                <div class="upload">
+                    <h2>源图</h2>
+                    <input class="reader" type="file" />
+                </div>
+                <canvas id="original-canvas"></canvas>
             </div>
             <div id="button-group-scale">
                 <h3>图像缩放</h3>

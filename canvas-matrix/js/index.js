@@ -12,7 +12,7 @@
         }
      };
 
-	var original, wrapper = document.getElementById('wrapper'), first = document.getElementById('first'), second = document.getElementById('second'), gray = document.getElementById('gray');
+	var original, wrapper = document.getElementById('wrapper'), first = document.getElementById('first'), second = document.getElementById('second'), gray = document.getElementById('gray'), oFReader = new FileReader();
 	
 	var readImage = function(obj) {
 		var image = document.getElementById(obj);
@@ -21,19 +21,27 @@
 		try {
 			var context = canvas.getContext('2d');
 		} catch(e) {
-			alert("你的浏览器版本太低啦，请使用Chrome，火狐或者IE9及其以上的浏览器");
+			alert("你的浏览器版本太低啦，请使用Chrome，Safari，火狐或者IE9及其以上的浏览器");
+			return;
 		}
 		var height = image.height;
 		var width = image.width;
+		canvas.setAttribute('width', width);
+		canvas.setAttribute('height', height);
 		context.drawImage(image, 0, 0, width, height);
-		var rawData = context.getImageData(0, 0, width, height).data;
+		try {
+			var rawData = context.getImageData(0, 0, width, height).data;
+		} catch(e) {
+			document.getElementById('message').style.display = 'block';
+			wrapper.style.display = 'none';
+		}
 		//转化为常见的灰度矩阵形式
 		var a = [];
 		var b = [];
 		for (var i = 0; i < height; ++i) {
 			a = [];
-			for (var j = 1; j <= width; ++j) {
-				a.push(rawData[4*i*width + 4*j - 2])    //取RGB中的G为灰度值(因为RGB在这里是一样的)
+			for (var j = 0; j < width; ++j) {
+				a.push(0.299*rawData[4*i*width + 4*j] + 0.587*rawData[4*i*width + 4*j + 1] + 0.114*rawData[4*i*width + 4*j + 2])    //RGB转灰度
 			}
 			b[i] = a;
 		}
@@ -182,8 +190,25 @@
 			second.style.display = 'none';
 			gray.style.display = 'block';
 			gray.appendChild(result);
-		})							
-	}
+		})		
+
+		//本地预览
+		Util.addHandler(oFReader, 'load', function(e) {
+			document.getElementById("original-image").src = e.target.result;
+			original = readImage('original-image');
+		})
+
+		//上传文件事件
+		var reader = document.getElementsByClassName("reader")[0];
+		Util.addHandler(reader, 'change', function(e) {
+			if (reader.files.length === 0) {
+				return;
+			}
+			var oFile = reader.files[0];
+  			oFReader.readAsDataURL(oFile);
+		});
+	};
+
 
 	var init = function() {
 		bindEvent();

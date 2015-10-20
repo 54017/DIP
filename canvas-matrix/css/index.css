@@ -2,9 +2,32 @@
 	overflow: auto;
 }
 
+.reader {
+	float: right;
+	font-size: 18px;
+	margin-top: 23px;
+}
+
+.upload {
+	overflow: hidden;
+}
+
+h2 {
+	width:100px;
+	float: left;
+}
+
+.nothing {
+	display: none;
+}
+
 .hide {
 	visibility: hidden;
 	position: absolute;
+}
+
+.message {
+	font-size: 30px;
 }
 
 div.control {
