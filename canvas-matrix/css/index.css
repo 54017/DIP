@@ -17,6 +17,10 @@ h2 {
 	float: left;
 }
 
+h4 {
+	margin: 0;
+}
+
 .nothing {
 	display: none;
 }
@@ -67,4 +71,9 @@ button {
 	float: left;
 	padding: 0 10px 10px 10px;
 	margin: 5px 0 10px 0;
+}
+
+div.color {
+	width: 45%;
+	float: left;
 }

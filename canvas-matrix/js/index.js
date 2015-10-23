@@ -1,5 +1,7 @@
 (function() {
 
+	"use strict";
+
 	var Util = {
         addHandler: function(ele, type, handler) {
             if (ele.addEventListener) {
@@ -12,7 +14,7 @@
         }
      };
 
-	var original, wrapper = document.getElementById('wrapper'), first = document.getElementById('first'), second = document.getElementById('second'), gray = document.getElementById('gray');
+	var original, wrapper = document.getElementById('wrapper'), first = document.getElementById('first'), second = document.getElementById('second'), gray = document.getElementById('gray'), canvas, context, left, top, lineW, strokeColor, rawData, mouseDown;
 	
 	try {
 		var oFReader = new FileReader();
@@ -23,15 +25,17 @@
 	var readImage = function(obj, level) {
 		var image = document.getElementById(obj);
 		//将原图画在canvas上
-		var canvas = document.getElementById('original-canvas');
+		canvas = document.getElementById('original-canvas');
 		try {
-			var context = canvas.getContext('2d');
+			context = canvas.getContext('2d');
 		} catch(e) {
 			alert("你的浏览器版本太低啦，请使用Chrome，Safari，火狐或者IE10及其以上的浏览器");
 			return;
 		}
 		var height = image.height;
 		var width = image.width;
+		left = canvas.getBoundingClientRect().left;
+		top = canvas.getBoundingClientRect().top;
 		canvas.setAttribute('width', width);
 		canvas.setAttribute('height', height);
 		context.drawImage(image, 0, 0, width, height);
@@ -231,12 +235,50 @@
 			var oFile = reader.files[0];
   			oFReader.readAsDataURL(oFile);
 		});
+
+		//画画板
+		Util.addHandler(canvas, 'mousedown', function(e) {
+			
+			context.beginPath();
+			context.lineWidth = parseInt(lineW);
+			context.strokeStyle = '#' + strokeColor; 
+			mouseDown = true;
+		})
+
+		Util.addHandler(canvas, 'mouseup', function(e) {
+			
+			mouseDown = false;
+		})
+
+		Util.addHandler(canvas, 'mousemove', function(e) {
+			if (mouseDown) {
+				var x = e.pageX - left;
+				var y = e.pageY - top;
+				context.lineTo(x, y);
+				context.stroke();
+			}
+		})
+
+		//颜色，线宽改变事件
+		var colorInput = document.getElementById('color');
+		Util.addHandler(colorInput, 'change', function(e) {
+			strokeColor = colorInput.value;
+		})
+
+		var select = document.getElementById('select');
+		Util.addHandler(select, 'change', function(e) {
+			lineW = select.value;
+			console.log(lineW);
+		})
+
 	};
 
 
 	var init = function() {
-		bindEvent();
+		strokeColor = '#FFFFFF';
+		lineW = 1;
 		original = readImage('original-image');
+		bindEvent();
 	}
 
 	window.onload = init;

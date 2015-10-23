@@ -20,6 +20,23 @@
                     <h2>源图</h2>
                     <input class="reader" type="file" />
                 </div>
+                <div class="color">
+                    <h4>改变画笔颜色</h4>
+                    <input class="color" id="color" />
+                </div>
+                <div class="size">
+                    <h4>改变画笔宽度</h4>
+                    <select id="select">
+                        <option>1px</option>
+                        <option>2px</option>
+                        <option>3px</option>
+                        <option>4px</option>
+                        <option>5px</option>
+                        <option>6px</option>
+                        <option>7px</option>
+                        <option>8px</option>
+                    </select>
+                </div>
                 <canvas id="original-canvas"></canvas>
             </div>
             <div id="button-group-scale">
@@ -57,6 +74,7 @@
             <h3>灰度</h3>
         </div>
     </div>
+    <script type="text/javascript" src="js/jscolor.js"></script>
 	<script type="text/javascript" src="js/index.js"></script>
 </body>
 </html>
