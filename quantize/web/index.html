@@ -13,31 +13,24 @@
         出于安全原因，Chrome，360等浏览器没有操作本地文件的权限，因此无法读出图片的像素具体信息，所以请用火狐，Safari或者IE9及其以上的浏览器打开本地文件，如果没有这些浏览器也不要紧，请访问 <a href="http://54017.github.io/DIP/canvas-matrix/">线上地址</a>
     </div>
 	<div id="wrapper">
-        <img class="hide" id="original-image" src="images/29.png">
+        <img class="hide" id="original-image" src="images/29_2.png">
         <div class="control">
-            <div class="original">
-                <div class="upload">
-                    <h2>源图</h2>
-                    <input class="reader" type="file" />
-                </div>
-                <div class="color">
-                    <h4>改变画笔颜色</h4>
-                    <input class="color" id="color" />
-                </div>
-                <div class="size">
-                    <h4>改变画笔宽度</h4>
-                    <select id="select">
-                        <option>1px</option>
-                        <option>2px</option>
-                        <option>3px</option>
-                        <option>4px</option>
-                        <option>5px</option>
-                        <option>6px</option>
-                        <option>7px</option>
-                        <option>8px</option>
-                    </select>
-                </div>
-                <canvas id="original-canvas"></canvas>
+            <div class="upload">
+                <h3>选取其他图片处理（可在源图上作画）</h3>
+                <input class="reader" type="file" />
+                <h4>改变画笔宽度</h4>
+                <select id="select">
+                    <option>1px</option>
+                    <option>2px</option>
+                    <option>3px</option>
+                    <option>4px</option>
+                    <option>5px</option>
+                    <option>6px</option>
+                    <option>7px</option>
+                    <option>8px</option>
+                </select>
+                <h4>改变画笔颜色</h4>
+                <input class="color" id="color" />
             </div>
             <div id="button-group-scale">
                 <h3>图像缩放</h3>
@@ -63,18 +56,54 @@
                 <button type="button" data-level='4'>4</button>
                 <button type="button" data-level='2'>2</button>
             </div>
+            <div id="button-group-equalize">
+                <h3>直方图均衡化</h3>
+                <button class="equalize" type="button">执行直方图均衡化</button>
+            </div>
+            <div id="button-group-filting">
+                <h3>均值滤波(采用全1)</h3>
+                <button type="button" data-size='3'>3*3</button>
+                <button type="button" data-size='7'>7*7</button>
+                <button type="button" data-size='11'>11*11</button>
+            </div>
+            <div id="button-group-sharpen">
+                <h3>图像锐化</h3>
+                <button id="sharpen" type="button">图像锐化</button>
+                <button id="rise" type="button">高提升滤波</button>
+            </div>
         </div>
-        <div id="first">
+        <div class="original">
+            <div class="source">
+                <h2>源图</h2>
+                <canvas id="original-canvas"></canvas>
+            </div>
+            <div class="histogram">
+                <h2>源图的直方图</h2>
+                <canvas id="original-chart" width="400" height="400"></canvas>
+            </div>
+        </div>
+        <div class="destination nothing">
+            <div class="success">
+                <h2>目标图</h2>
+            </div>
+            <div class="success-histogram">
+                <h2>目标图的直方图</h2>
+                <canvas id="success-chart" width="400" height="400"></canvas>
+            </div>
+        </div>
+        <div class="nothing" id="first">
             <h3>最近邻插值算法</h3>
         </div>
-        <div id="second">
+        <div class="nothing" id="second">
             <h3>双线性插值法</h3>
         </div>
-        <div id="gray">
+        <div class="nothing" id="gray">
             <h3>灰度</h3>
         </div>
     </div>
     <script type="text/javascript" src="js/jscolor.js"></script>
 	<script type="text/javascript" src="js/index.js"></script>
+    <script type="text/javascript" src="js/moment.js"></script>
+    <script type="text/javascript" src="js/Chart.js"></script>
 </body>
 </html>
