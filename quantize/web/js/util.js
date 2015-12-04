@@ -10,72 +10,51 @@ Util = (function() {
         }
     }
 
-    //创建正矩阵
-	var createMatrix = function() {
-	var length = arguments.length;
-	var height = width = Math.sqrt(length);
-	if (height * width != length) {
-		alert("数量不能组成单位矩阵");
-		return;
-	}
-	var resultMatrix = [];
-	for (var i = 0; i < height; ++i) {
-		var tempRow = [];
-		for (var j = 0; j < width; ++j) {
-			tempRow[j] = arguments[i*width + j];
-		}
-		resultMatrix[i] = tempRow;
-	}
-	return resultMatrix;
-	}
-
-	//灰度图的均值滤波
-	var filting = function(original, filter) {
-		if (typeof filter[0] === 'undefined' || typeof original[0] === 'undefined') {
-					alert("矩阵传的不对！都没有第一行");
-					return;
-		}
-		var tempRow = [], resultMatrix = [];
-		var filterHeight = filter.length;
-		var filterWidth = filter[0].length;
-		var height = original.length;
-		var width = original[0].length;
-		for (var i = 0; i < height; ++i) {
+    //全1均值滤波器
+    var createAveragingFilter = function(size) {
+    	var filter = [],
+    		tempRow;
+    	for (var i = 0; i < size; ++i) {
 			tempRow = [];
-			for (var j = 0; j < width; ++j) {
-				sum = 0;
-				for (var k = 0; k < filterHeight; ++k) {
-					for (var v = 0; v < filterWidth; ++v) {
-						if (i + k -1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
-						} else {
-							sum += filter[k][v] * original[i + k - 1][j + v - 1];
-						}
-					}
-				}
-				tempRow[j] = sum;
+			for (var j = 0; j < size; ++j) {
+				tempRow[j] = 1 / (size * size);
 			}
-			resultMatrix[i] = tempRow;
+			filter[i] = tempRow;
 		}
-		return resultMatrix;
+		return filter;
 	}
 
-	//rawData转化为矩阵
-	var changeToMatrix = function(rawData) {
-			//转化为常见的矩阵形式（RGBA矩阵每行是4*width个）
-			var b = [];
-			var tempStart, num = 4*this.width;
-			for (var i = 0, height = this.height; i < height; ++i) {
-			    tempStart = i*num;
-				b[i] = Array.prototype.slice.call(rawData, tempStart, tempStart + num);
+	//3*3中间为-8
+	var createLaplacianFilter = function() {
+		var filter = [], tempRow = [], size = 3;
+		for (var i = 0; i < size; ++i) {
+			tempRow = [];
+			for (var j = 0; j < size; ++j) {
+				tempRow[j] = 1;
+				if (i == 0 && j == 0) {
+					tempRow[j] = -8;
+				}
 			}
-			return b;
+			filter[i] = tempRow;
+		}
+		return filter;
+	}
+
+	//创建二维数组
+	var	createTwoDimensionalArray = function(row, col) {
+			var matrix = [];
+			for (var i = 0; i < row; ++i) {
+				var tempRow = [];
+				matrix.push(tempRow);
+			}
+			return matrix;
 		}
 
 	return {
-		createMatrix: createMatrix,
-		filting: filting,
-		addHandler: addHandler,
-		changeToMatrix: changeToMatrix
+		createAveragingFilter: createAveragingFilter,
+		createLaplacianFilter: createLaplacianFilter,
+		createTwoDimensionalArray: createTwoDimensionalArray,
+		addHandler: addHandler
 	}
 
 }());
