@@ -1,0 +1,40 @@
+var multiply = function(first, firstWidth, firstHeight, second, secondWidth, secondHeight) {
+    var resultMatrix = createTwoDimensionalArray(secondWidth, firstHeight),
+        sum;
+    fillZeroForComplex(resultMatrix, secondWidth, firstHeight);
+    for(var i = 0; i < firstWidth; i++) {
+        for(var j = 0; j < firstHeight; j++) {
+            for(var k = 0; k < secondWidth; k++) {
+                resultMatrix[j][k].real += first[j][i].imag * second[i][k].imag * (-1); 
+                resultMatrix[j][k].imag += first[j][i].imag * second[i][k].real;
+            }
+        }
+    }
+    console.log(JSON.parse(JSON.stringify(resultMatrix)));
+    return resultMatrix;
+}
+
+var createTwoDimensionalArray = function(col, row) {
+    var matrix = [];
+    for (var i = 0; i < row; ++i) {
+        var tempRow = [];
+        matrix.push(tempRow);
+    }
+    return matrix;
+}
+
+
+var fillZeroForComplex = function(matrix, width, height) {
+    for (var i = 0; i < height; ++i) {
+        for (var  j = 0; j < width; ++j) {
+            matrix[i][j] = { real: 0, imag: 0 };
+        }
+    }
+}
+
+
+
+var a = [[{real: 0, imag: 1}, {real: 0, imag: 2}, {real: 0, imag: 3}],[{real: 0, imag:4}, {real: 5, imag: 1}, {real: 6, imag:0}]];
+var b = [[{real: 1, imag: 1}, {real: 4, imag: 1}],[{real:2, imag: 1}, {real:5, imag: 1}], [{real:3, imag: 0}, {real:6, imag: 0}]];
+
+multiply(a, 3, 2, b, 2, 3)

@@ -62,6 +62,14 @@
 			}
 		}
 		this.hsiData = this.changeToHSI();
+		//hsi中的intensity矩阵
+		this.intensity = Util.createTwoDimensionalArray(this.height);
+		for (var i = 0; i < this.height; ++i) {
+			for (var j = 0; j < this.width; ++j) {
+				this.intensity[i][j] = this.hsiData[i][4 * j + 2];
+			}
+		}
+		console.log(this.intensity);
 		//傅立叶变换F(u, v)
 		this.fourierData = null;
 	}
@@ -198,7 +206,7 @@
 			} else if (flag == 3) {
 				return this.fastDft();
 			} else if (flag == 4) {
-				return this.fastIdft();
+				return this.fastIdft(this.fourierData);
 			}
 		},
 		restoreToRGB: function(resultMatrix, width, height) {
@@ -273,38 +281,27 @@
 			var length = filter.length,
 				width = this.width,
 				height = this.height,
-				sum, tempDataReal, tempDataImag, real, imag, sumReal, sumImag, matrixReal, matrixImag,
-				resultMatrix = Util.createTwoDimensionalArray(height, width),
-				tempRow = [];
-			if (this.fourierData == null) {
-				this.fourierData = this.fastDft(this.hsiData, width, height).fourierData;
-			}
-			Util.paddingZero(filter)
-			for (var i = 0; i < height; ++i) {
-				for (var j = 0; j < width; ++j) {
-					sumReal = sumImag = 0;
-					for (var k = 0; k < length; ++k) {
-						for (var v = 0; v < length; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
-							} else {
-								tempDataReal = filter[k][v].real;
-								tempDataImag = filter[k][v].imag;
-								matrixReal = this.fourierData[i + k - 1][j + v - 1].real;
-								matrixImag = this.fourierData[i + k - 1][j + v - 1].imag;
-								real = tempDataReal * matrixReal - tempDataImag * matrixImag;
-								imag = tempDataReal * matrixImag + tempDataImag * matrixReal;
-								sumReal += real;
-								sumImag += imag;
-
-							}
-						}
-					}
-					resultMatrix[i][j] = { real: sumReal, imag: sumImag };
+				result, tempDataReal, tempDataImag, real, imag, sumReal, sumImag, matrixReal, matrixImag,
+				resultMatrix,
+				tempRow = [], fourierData, mn = width * height,
+				paddingWidth = width + length,
+				paddingHeight = height + length, temp;
+			filter = Util.paddingZero(filter, paddingWidth, paddingHeight);
+			filter = Util.fourierTransform(filter, paddingWidth, paddingHeight);
+			fourierData = Util.fourierTransform(Util.paddingZero(this.intensity, paddingWidth, paddingHeight), paddingWidth, paddingHeight);
+			resultMatrix = Util.multiply(filter, fourierData, paddingWidth, paddingHeight);
+			temp = Util.fastIdft(resultMatrix, paddingWidth, paddingHeight);
+			for (var v = 0; v < height; ++v) {
+				for (var u = 0; u < width; ++u) {
+					result = parseInt(temp[v][u].real/mn) * Math.pow(-1, (u + v) % 2);
+					resultMatrix[v][4 * u] = this.hsiData[v][4 * u];
+					resultMatrix[v][4 * u + 1] = this.hsiData[v][4 * u + 1];
+					resultMatrix[v][4 * u + 2] = result;
+					resultMatrix[v][4 * u + 3] = this.hsiData[v][4 * u + 3];
 				}
 			}
-			console.log("fffff");
-			console.log(resultMatrix);
-			return this.fastIdft(resultMatrix);
+			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
 		},
 		//高提升滤波
 		rise: function(filter) {
@@ -332,10 +329,10 @@
 			var width = this.width,
 				height = this.height,
 				sumReal, sumImag, result, tempData, number, real, imag,
-				resultMatrix = Util.createTwoDimensionalArray(height, width),
+				resultMatrix = Util.createTwoDimensionalArray(height),
 				mn = Math.sqrt(width * height);
 			if (this.fourierData == null) {
-				this.fourierData = Util.createTwoDimensionalArray(height, width);
+				this.fourierData = Util.createTwoDimensionalArray(height);
 			}
 			for (var u = 0; u < width; ++u) {
 				for (var v = 0; v < height; ++v) {
@@ -362,14 +359,14 @@
 		},
 		//(M + N) * M * N复杂度 先行后列
 		fastDft: function() {
-			var width = typeof width == 'undefined' ? this.width : width,
-				height = typeof height == 'undefined' ? this.height : height,
+			var width = this.width,
+				height = this.height,
 				sumReal, sumImag, result, tempData, number, real, imag, tempDataReal, tempDataImag,
-				resultMatrix = Util.createTwoDimensionalArray(height, width),
-				tempMatrix = Util.createTwoDimensionalArray(height, width),
+				resultMatrix = Util.createTwoDimensionalArray(height),
+				tempMatrix = Util.createTwoDimensionalArray(height),
 				mn = Math.sqrt(width * height);
 			if (this.fourierData == null) {
-				this.fourierData = Util.createTwoDimensionalArray(height, width); 
+				this.fourierData = Util.createTwoDimensionalArray(height); 
 			}
 			for (var v = 0; v < height; ++v) {
 				for (var u = 0; u < width; ++u) {
@@ -398,7 +395,7 @@
 							sumImag += imag;
 					}
 					this.fourierData[v][u] = { real: sumReal, imag: sumImag }
-					result = parseInt(Math.sqrt(Math.pow(sumReal, 2) + Math.pow(sumImag, 2)))/mn;
+					result = parseInt(Math.sqrt(Math.pow(sumReal, 2) + Math.pow(sumImag, 2)))/mn; //ParseInt很重要，不然后面会浮点数计算，导致时间变为3倍
 					for (var z = 0; z < 3; ++z) {
 						resultMatrix[v][4 * u + z] = result;
 					}
@@ -412,7 +409,7 @@
 			var width = this.width,
 				height = this.height,
 				tempDataReal, tempDataImag,
-				resultMatrix = Util.createTwoDimensionalArray(height, width),
+				resultMatrix = Util.createTwoDimensionalArray(height),
 				sumImag, sumReal, number, real, imag, result, mn = width * height;
 			for (var u = 0; u < width; ++u) {
 				for (var v = 0; v < height; ++v) {
@@ -443,8 +440,8 @@
 			var width = this.width,
 				height = this.height,
 				tempDataReal, tempDataImag,
-				resultMatrix = Util.createTwoDimensionalArray(height, width),
-				tempMatrix = Util.createTwoDimensionalArray(height, width),
+				resultMatrix = Util.createTwoDimensionalArray(height),
+				tempMatrix = Util.createTwoDimensionalArray(height),
 				sumImag, sumReal, number, real, imag, result, mn = width * height;
 			for (var v = 0; v < height; ++v) {
 				for (var u = 0; u < width; ++u) {
@@ -707,16 +704,10 @@
 			var a = new Date();
 			if (button.id == 'average') {
 				var filter = Util.createAveragingFilter(7);
-				var	fourierFilter = original.fastDft(filter, 7, 7).fourierData;
-				console.log("fourierFilter");
-				console.log(fourierFilter);
-				result = original.fourierFilting(fourierFilter);
+				result = original.fourierFilting(filter);
 			} else if (button.id == 'laplacian') {
 				var filter = Util.createLaplacianFilter();
-				var	fourierFilter = original.fastDft(filter, 3, 3).fourierData;
-				console.log("fourierFilterlaplacian");
-				console.log(fourierFilter);
-				result = original.fourierFilting(fourierFilter);
+				result = original.fourierFilting(filter);
 			} else {
 				result = original.fourierTransform(flag);
 
