@@ -35,6 +35,7 @@
 		try {
 			rawData = context.getImageData(0, 0, width, height).data;
 		} catch(e) {
+			console.log(e);
 			document.getElementById('message').style.display = 'block';
 			wrapper.style.display = 'none';
 		}
@@ -69,7 +70,6 @@
 				this.intensity[i][j] = this.hsiData[i][4 * j + 2];
 			}
 		}
-		console.log(this.intensity);
 		//傅立叶变换F(u, v)
 		this.fourierData = null;
 	}
@@ -204,9 +204,11 @@
 			} else if (flag == 2) {
 				return this.idft();
 			} else if (flag == 3) {
-				return this.fastDft();
+				var result = this.fastDft(this.intensity, this.width, this.height);
+				this.fourierData = result.fourierData;
+				return this.draw(result.resultMatrix, this.width, this.height);
 			} else if (flag == 4) {
-				return this.fastIdft(this.fourierData);
+				return this.fastIdft(this.fourierData, this.width, this.height);
 			}
 		},
 		restoreToRGB: function(resultMatrix, width, height) {
@@ -250,7 +252,7 @@
 			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
 			return this.draw(resultMatrix, width, height);
 		},
-		//滤波
+		//算术滤波
 		filting: function(filter) {
 			if (typeof filter[0] === 'undefined' || filter.length !== filter[0].length) {
 				alert("传入的矩阵格式错误或者不是等行列，请换一个");
@@ -276,6 +278,96 @@
 			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
 			return this.draw(resultMatrix, width, height);
 		},
+		//中值滤波
+		medianFilting: function(size) {
+			var width = this.width, height = this.height;
+			var sum, resultMatrix = this.changeToHSI(), tempRow = [],
+				median = parseInt(size * size / 2);
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					sum = [];
+					for (var k = 0; k < size; ++k) {
+						for (var v = 0; v < size; ++v) {
+							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+								sum.push(0);
+							} else {
+								sum.push(this.hsiData[i + k - 1][4 * (j + v - 1) + 2]);
+							}
+						}
+					}
+					sum.sort();
+					resultMatrix[i][4 * j + 2] = sum[median];
+				}
+			}
+			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
+		//调和均值滤波
+		hamonicFilting: function(size) {
+			var width = this.width, height = this.height
+			var sum, resultMatrix = this.changeToHSI(), tempRow = [];
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					sum = 0;
+					for (var k = 0; k < size; ++k) {
+						for (var v = 0; v < size; ++v) {
+							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							} else {
+								sum += 1 / this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+							}
+						}
+					}
+					resultMatrix[i][4 * j + 2] = size * size / sum;
+				}
+			}
+			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
+		//反调和均值滤波
+		contraHamonicFilting: function(size, q) {
+			var width = this.width, height = this.height
+			var sumUp, sumDown, resultMatrix = this.changeToHSI(), tempRow = [];
+			console.log(q);
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					sumUp = 0;
+					sumDown = 0;
+					for (var k = 0; k < size; ++k) {
+						for (var v = 0; v < size; ++v) {
+							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							} else {
+								sumUp += this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+								sumDown += this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+							}
+						}
+					}
+					resultMatrix[i][4 * j + 2] = Math.pow(sumUp, q + 1) / Math.pow(sumDown, q) / (size * size);
+				}
+			}
+			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
+		//几何均值滤波
+		geometricFilting: function(size) {
+			var width = this.width, height = this.height;
+			var sum, resultMatrix = this.changeToHSI(), tempRow = [];
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					sum = 1;
+					for (var k = 0; k < size; ++k) {
+						for (var v = 0; v < size; ++v) {
+							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							} else {
+								sum *= this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+							}
+						}
+					}
+					resultMatrix[i][4 * j + 2] = Math.pow(sum, 1 / (size * size));
+				}
+			}
+			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
 		//频谱域滤波
 		fourierFilting: function(filter) {
 			var length = filter.length,
@@ -287,8 +379,8 @@
 				paddingWidth = width + length,
 				paddingHeight = height + length, temp;
 			filter = Util.paddingZero(filter, paddingWidth, paddingHeight);
-			filter = Util.fourierTransform(filter, paddingWidth, paddingHeight);
-			fourierData = Util.fourierTransform(Util.paddingZero(this.intensity, paddingWidth, paddingHeight), paddingWidth, paddingHeight);
+			filter = this.fastDft(filter, paddingWidth, paddingHeight).fourierData;
+			fourierData = this.fastDft(Util.paddingZero(this.intensity, paddingWidth, paddingHeight), paddingWidth, paddingHeight).fourierData;
 			resultMatrix = Util.multiply(filter, fourierData, paddingWidth, paddingHeight);
 			temp = Util.fastIdft(resultMatrix, paddingWidth, paddingHeight);
 			for (var v = 0; v < height; ++v) {
@@ -331,9 +423,6 @@
 				sumReal, sumImag, result, tempData, number, real, imag,
 				resultMatrix = Util.createTwoDimensionalArray(height),
 				mn = Math.sqrt(width * height);
-			if (this.fourierData == null) {
-				this.fourierData = Util.createTwoDimensionalArray(height);
-			}
 			for (var u = 0; u < width; ++u) {
 				for (var v = 0; v < height; ++v) {
 					sumReal = sumImag = 0;
@@ -358,21 +447,17 @@
 			return this.draw(resultMatrix, width, height);
 		},
 		//(M + N) * M * N复杂度 先行后列
-		fastDft: function() {
-			var width = this.width,
-				height = this.height,
-				sumReal, sumImag, result, tempData, number, real, imag, tempDataReal, tempDataImag,
+		fastDft: function(matrix, width, height) {
+			var sumReal, sumImag, result, tempData, number, real, imag, tempDataReal, tempDataImag,
 				resultMatrix = Util.createTwoDimensionalArray(height),
 				tempMatrix = Util.createTwoDimensionalArray(height),
-				mn = Math.sqrt(width * height);
-			if (this.fourierData == null) {
-				this.fourierData = Util.createTwoDimensionalArray(height); 
-			}
+				mn = Math.sqrt(width * height),
+				fourierData = Util.createTwoDimensionalArray(height);
 			for (var v = 0; v < height; ++v) {
 				for (var u = 0; u < width; ++u) {
 					sumReal = sumImag = 0;
 					for (var x = 0; x < width; ++x) {
-							tempData = this.hsiData[v][4 * x + 2] * Math.pow(-1, (x + v) % 2);
+							tempData = matrix[v][x] * Math.pow(-1, (x + v) % 2);
 							number = 2 * Math.PI * (u * x / width);
 							real = tempData * Math.cos(number);
 							imag = tempData * Math.sin(number) * (-1);
@@ -394,7 +479,7 @@
 							sumReal += real;
 							sumImag += imag;
 					}
-					this.fourierData[v][u] = { real: sumReal, imag: sumImag }
+					fourierData[v][u] = { real: sumReal, imag: sumImag }
 					result = parseInt(Math.sqrt(Math.pow(sumReal, 2) + Math.pow(sumImag, 2)))/mn; //ParseInt很重要，不然后面会浮点数计算，导致时间变为3倍
 					for (var z = 0; z < 3; ++z) {
 						resultMatrix[v][4 * u + z] = result;
@@ -402,7 +487,7 @@
 					resultMatrix[v][4 * u + 3] = 255;
 				}
 			}
-			return this.draw(resultMatrix, width, height);
+			return { fourierData: fourierData, resultMatrix: resultMatrix };
 		},
 		//逆傅立叶变换(10分钟版)
 		idft: function() {
@@ -436,10 +521,8 @@
 			return this.draw(resultMatrix, width, height);
 		},
 		//逆傅立叶变换(5秒钟版)
-		fastIdft: function() {
-			var width = this.width,
-				height = this.height,
-				tempDataReal, tempDataImag,
+		fastIdft: function(fourierData, width, height) {
+			var tempDataReal, tempDataImag,
 				resultMatrix = Util.createTwoDimensionalArray(height),
 				tempMatrix = Util.createTwoDimensionalArray(height),
 				sumImag, sumReal, number, real, imag, result, mn = width * height;
@@ -447,8 +530,8 @@
 				for (var u = 0; u < width; ++u) {
 					sumReal = sumImag = 0;
 					for (var x = 0; x < width; ++x) {
-						tempDataReal = this.fourierData[v][x].real;
-						tempDataImag = this.fourierData[v][x].imag;
+						tempDataReal = fourierData[v][x].real;
+						tempDataImag = fourierData[v][x].imag;
 						number = 2 * Math.PI * (u * x / width);
 						real = tempDataReal * Math.cos(number) - tempDataImag * Math.sin(number);
 						imag = tempDataReal * Math.sin(number) + tempDataImag * Math.cos(number);
@@ -654,14 +737,28 @@
 				drawHistogram(ctx, data);
 			}
 		});
-		//图像滤波
+		//算术均值滤波
 		Util.addHandler(document.getElementById('button-group-filting'), 'click', function(e) {
-			var button = e.target, size = parseInt(button.getAttribute('data-size'));
+			var button = e.target, size = parseInt(button.getAttribute('data-size')),
+				buttonParentName = button.parentNode.className;
 			if (button.tagName.toLowerCase() !== 'button') {
 				return;
 			}
-			var filter = Util.createAveragingFilter(size);
-			var result = original.filting(filter);
+			if (buttonParentName == 'arithmetic') {
+				var filter = Util.createAveragingFilter(size),
+					result = original.filting(filter);
+			} else if (buttonParentName == 'geometric') {
+				var result = original.geometricFilting(size);
+			} else if (buttonParentName == 'median') {
+				var result = original.medianFilting(size);
+			} else if (buttonParentName == 'harmonic') {
+				var result = original.hamonicFilting(size);
+			} else if (buttonParentName == 'contra-harmonic') {
+				var index = document.getElementById('qValue').selectedIndex;
+				var q = document.getElementById('qValue').options[index].value;
+				console.log(q);
+				var result = original.contraHamonicFilting(size, parseFloat(q));
+			}
 			document.body.appendChild(result.canvas);
 		});
 
@@ -713,7 +810,7 @@
 
 			}
 			var b = new Date();
-			console.log((b - a)/1000);
+			console.log((b - a) / 1000);
 			document.body.appendChild(result.canvas);
 		});
 
