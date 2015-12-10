@@ -18,7 +18,7 @@
             <div class="upload">
                 <h3>选取其他图片处理（可在源图上作画）</h3>
                 <input class="reader" type="file" />
-                <h4>改变画笔宽度</h4>
+                <h4>改变画笔宽度 / 颜色 </h4>
                 <select id="select">
                     <option>1px</option>
                     <option>2px</option>
@@ -29,7 +29,6 @@
                     <option>7px</option>
                     <option>8px</option>
                 </select>
-                <h4>改变画笔颜色</h4>
                 <input class="color" id="color" />
             </div>
             <div id="button-group-scale">
@@ -48,23 +47,6 @@
                     <button id="submit" type="button">提交</button>
                 </div>
             </div>
-            <div id="button-group-gray">
-                <h3>灰度level</h3>
-                <button type="button" data-level='128'>128</button>
-                <button type="button" data-level='32'>32</button>
-                <button type="button" data-level='8'>8</button>
-                <button type="button" data-level='4'>4</button>
-                <button type="button" data-level='2'>2</button>
-            </div>
-            <div id="button-group-equalize">
-                <h3>直方图均衡化</h3>
-                <button class="equalize" type="button">执行直方图均衡化</button>
-            </div>
-            <div id="button-group-sharpen">
-                <h3>图像锐化</h3>
-                <button id="sharpen" type="button">图像锐化</button>
-                <button id="rise" type="button">高提升滤波</button>
-            </div>
             <div id="button-group-filting">
                 <div class="arithmetic">
                     <h3>算术均值滤波(采用全1)</h3>
@@ -81,7 +63,21 @@
                     <h3>中值滤波</h3>
                     <button type="button" data-size='3'>3*3</button>
                     <button type="button" data-size='7'>7*7</button>
-                    <button type="button" data-size='11'>11*11</button>
+                </div>
+                <div class="max">
+                    <h3>最大滤波</h3>
+                    <button type="button" data-size='3'>3*3</button>
+                    <button type="button" data-size='7'>7*7</button>
+                </div>
+                <div class="min">
+                    <h3>最小滤波</h3>
+                    <button type="button" data-size='3'>3*3</button>
+                    <button type="button" data-size='7'>7*7</button>
+                </div>
+                <div class="harmonic">
+                    <h3>调和均值滤波</h3>
+                    <button type="button" data-size='3'>3*3</button>
+                    <button type="button" data-size='9'>9*9</button>
                 </div>
                 <div class="harmonic">
                     <h3>调和均值滤波</h3>
@@ -92,13 +88,30 @@
                     <h3>反调和均值滤波</h3>
                     <select id="qValue">
                         <option value=-2.5>Q = -2.5</option>
-                        <option value=-1.5>Q = -1.5</option>
+                        <option value=-1.5 selected="selected">Q = -1.5</option>
                         <option value=1.5>Q = 1.5</option>
                         <option value=2.5>Q = 2.5</option>
                     </select>
                     <button type="button" data-size='3'>3*3</button>
                     <button type="button" data-size='9'>9*9</button>
                 </div>
+            </div>
+            <div id="button-group-gray">
+                <h3>灰度level</h3>
+                <button type="button" data-level='128'>128</button>
+                <button type="button" data-level='32'>32</button>
+                <button type="button" data-level='8'>8</button>
+                <button type="button" data-level='4'>4</button>
+                <button type="button" data-level='2'>2</button>
+            </div>
+            <div id="button-group-equalize">
+                <h3>直方图均衡化</h3>
+                <button class="equalize" type="button">执行直方图均衡化</button>
+            </div>
+            <div id="button-group-sharpen">
+                <h3>图像锐化</h3>
+                <button id="sharpen" type="button">图像锐化</button>
+                <button id="rise" type="button">高提升滤波</button>
             </div>
             <div id="button-group-fourier">
                 <h3>傅立叶变换（支持彩色图片）</h3>

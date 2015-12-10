@@ -302,6 +302,51 @@
 			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
 			return this.draw(resultMatrix, width, height);
 		},
+		//最大滤波
+		maxFilting: function(size) {
+			var width = this.width, height = this.height;
+			var max, resultMatrix = this.changeToHSI(), tempRow = [],
+				median = parseInt(size * size / 2);
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					max = 0;
+					for (var k = 0; k < size; ++k) {
+						for (var v = 0; v < size; ++v) {
+							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							} else {
+								max = this.hsiData[i + k - 1][4 * (j + v - 1) + 2] > max ? this.hsiData[i + k - 1][4 * (j + v - 1) + 2] : max;
+							}
+						}
+					}
+					resultMatrix[i][4 * j + 2] = max;
+				}
+			}
+			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
+		//最小滤波
+		minFilting: function(size) {
+			var width = this.width, height = this.height;
+			var min, resultMatrix = this.changeToHSI(), tempRow = [],
+				median = parseInt(size * size / 2);
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					min= Infinity;
+					for (var k = 0; k < size; ++k) {
+						for (var v = 0; v < size; ++v) {
+							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+								min = 0;
+							} else {
+								min = this.hsiData[i + k - 1][4 * (j + v - 1) + 2] < min ? this.hsiData[i + k - 1][4 * (j + v - 1) + 2] : min;
+							}
+						}
+					}
+					resultMatrix[i][4 * j + 2] = min;
+				}
+			}
+			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
 		//调和均值滤波
 		hamonicFilting: function(size) {
 			var width = this.width, height = this.height
@@ -314,6 +359,9 @@
 							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
 							} else {
 								sum += 1 / this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+								if (this.hsiData[i + k - 1][4 * (j + v - 1) + 2] == 0) {
+									console.log(sum);
+								}
 							}
 						}
 					}
@@ -336,12 +384,12 @@
 						for (var v = 0; v < size; ++v) {
 							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
 							} else {
-								sumUp += this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
-								sumDown += this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+								sumUp += Math.pow(this.hsiData[i + k - 1][4 * (j + v - 1) + 2], q + 1);
+								sumDown += Math.pow(this.hsiData[i + k - 1][4 * (j + v - 1) + 2], q);
 							}
 						}
 					}
-					resultMatrix[i][4 * j + 2] = Math.pow(sumUp, q + 1) / Math.pow(sumDown, q) / (size * size);
+					resultMatrix[i][4 * j + 2] = sumUp / sumDown;
 				}
 			}
 			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
@@ -737,7 +785,7 @@
 				drawHistogram(ctx, data);
 			}
 		});
-		//算术均值滤波
+		//滤波
 		Util.addHandler(document.getElementById('button-group-filting'), 'click', function(e) {
 			var button = e.target, size = parseInt(button.getAttribute('data-size')),
 				buttonParentName = button.parentNode.className;
@@ -756,8 +804,11 @@
 			} else if (buttonParentName == 'contra-harmonic') {
 				var index = document.getElementById('qValue').selectedIndex;
 				var q = document.getElementById('qValue').options[index].value;
-				console.log(q);
 				var result = original.contraHamonicFilting(size, parseFloat(q));
+			} else if (buttonParentName == 'max') {
+				var result = original.maxFilting(size);
+			} else if (buttonParentName == 'min') {
+				var result = original.minFilting(size);
 			}
 			document.body.appendChild(result.canvas);
 		});
