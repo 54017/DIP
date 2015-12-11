@@ -2,7 +2,6 @@
 
 	"use strict";
 
-
 	var original, canvas, context, left, top, lineW, strokeColor, rawData, mouseDown,
 		wrapper = document.getElementById('wrapper'),
 		first = document.getElementById('first'), 
@@ -50,19 +49,17 @@
 		this.level = typeof level !== 'undefined' ? level : 256;
 		//二维矩阵
 		this.matrixData = this.changeToMatrix(rawData);
+		this.hsiData = this.changeToHSI();
 		//灰度占数量直方图
 		this.histogram = [];
-		//累积概率
-		this.cumulation = [];
 		for (var i = 0; i <= 255; ++i) {
 			this.histogram[i] = 0;
 		}
 		for (var i = 0, height = this.height; i < height; ++i) {
 			for (var j = 0, width = this.width; j < width; ++j) {
-				++this.histogram[parseInt(this.matrixData[i][4*j + 2])];
+				++this.histogram[parseInt(this.hsiData[i][4*j + 2])];
 			}
 		}
-		this.hsiData = this.changeToHSI();
 		//hsi中的intensity矩阵
 		this.intensity = Util.createTwoDimensionalArray(this.height);
 		for (var i = 0; i < this.height; ++i) {
@@ -234,22 +231,61 @@
 			}
 			return resultMatrix;
 		},
-		//直方图均衡化
+		//直方图均衡化(HSI中对I均衡化)
 		equalize: function() {
-			var height = this.height, width = this.width;
-			var resultMatrix = this.changeToHSI();
-			//计算累积概率
-			var sumPixels = width * height, level = this.level;
+			var height = this.height, width = this.width,
+				resultMatrix = this.changeToHSI(),
+				//计算累积概率
+				sumPixels = width * height, level = this.level,
+				cumulation = [];
 			for (var i = 0; i < level; ++i) {
-					this.cumulation[i] = i == 0 ? this.histogram[i]/sumPixels : (this.histogram[i]/sumPixels + this.cumulation[i - 1]);
+					cumulation[i] = i == 0 ? this.histogram[i]/sumPixels : (this.histogram[i]/sumPixels + cumulation[i - 1]);
 			}
 			//对I直方图均衡化
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					resultMatrix[i][4*j + 2] = this.cumulation[parseInt(resultMatrix[i][4*j + 2])]*level;
+					resultMatrix[i][4 * j + 2] = cumulation[parseInt(resultMatrix[i][4 * j + 2])] * level;
 				}
 			}
 			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
+		//对RGB分别直方图均衡化再融合
+		informalEqualize:function() {
+			var height = this.height, width = this.width,
+				resultMatrix = this.changeToMatrix(rawData),
+				//计算累积概率
+				sumPixels = width * height, level = this.level,
+				cumulationR = [],
+				cumulationG = [],
+				cumulationB = [],
+				histogramR = [],
+				histogramG = [],
+				histogramB = [];
+			for (var i = 0; i <= 255; ++i) {
+				histogramR[i] = 0;
+				histogramG[i] = 0;
+				histogramB[i] = 0;
+			}
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					++histogramR[parseInt(resultMatrix[i][4 * j])];
+					++histogramG[parseInt(resultMatrix[i][4 * j + 1])];
+					++histogramB[parseInt(resultMatrix[i][4 * j + 2])];
+				}
+			}
+			for (var i = 0; i < level; ++i) {
+					cumulationR[i] = i == 0 ? histogramR[i]/sumPixels : (histogramR[i]/sumPixels + cumulationR[i - 1]);
+					cumulationG[i] = i == 0 ? histogramG[i]/sumPixels : (histogramG[i]/sumPixels + cumulationG[i - 1]);
+					cumulationB[i] = i == 0 ? histogramB[i]/sumPixels : (histogramB[i]/sumPixels + cumulationB[i - 1]);
+			}
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					resultMatrix[i][4 * j] = cumulationR[parseInt(resultMatrix[i][4 * j])] * level;
+					resultMatrix[i][4 * j + 1] = cumulationG[parseInt(resultMatrix[i][4 * j + 1])] * level;
+					resultMatrix[i][4 * j + 2] = cumulationB[parseInt(resultMatrix[i][4 * j + 2])] * level;
+				}
+			}
 			return this.draw(resultMatrix, width, height);
 		},
 		//算术滤波
@@ -276,6 +312,32 @@
 				}
 			}
 			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			return this.draw(resultMatrix, width, height);
+		},
+		//添加噪声
+		addSaltPepperNoise: function(salt, pepper) {
+			for (var i = 0; i < arguments.length; ++i) {
+				arguments[i] = arguments[i] == "" ? 0 : arguments[i];
+			}
+			var width = this.width,
+				height = this.height,
+				resultMatrix = this.changeToMatrix(rawData),
+				random;
+			//添加椒盐噪声
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					random = Math.random();
+					if (random < pepper) {
+						resultMatrix[i][4 * j] = 0;
+						resultMatrix[i][4 * j + 1] = 0;
+						resultMatrix[i][4 * j + 2] = 0;
+					} else if (random > 1- salt) {
+						resultMatrix[i][4 * j] = 255;
+						resultMatrix[i][4 * j + 1] = 255;
+						resultMatrix[i][4 * j + 2] = 255;
+					}
+				}
+			}
 			return this.draw(resultMatrix, width, height);
 		},
 		//中值滤波
@@ -443,6 +505,8 @@
 			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
 			return this.draw(resultMatrix, width, height);
 		},
+		//
+
 		//高提升滤波
 		rise: function(filter) {
 			var average = this.filting(filter).canvas,
@@ -633,7 +697,7 @@
 					for (var k = 0; k < 4; ++k) {
 						resultImg.data[tempStart + 4*j + k] = matrix[i][4*j + k];
 					}
-					++dstHistogram[parseInt(matrix[i][4*j + 2])];
+					++dstHistogram[parseInt((matrix[i][4 * j] + matrix[i][4*j + 1] + matrix[i][4 * j + 2]) / 3)];
 				}
 			}
 			ctx.putImageData(resultImg, 0, 0);
@@ -676,6 +740,7 @@
 			second.style.display = 'block';
 			gray.style.display = 'none';
 		});
+
 		//灰度变换
 		Util.addHandler(buttonsGray, 'click', function(e) {
 			var button = e.target;
@@ -759,31 +824,36 @@
 			lineW = select.value;
 		});
 
+		//直方图均衡化
 		Util.addHandler(document.getElementById('button-group-equalize'), 'click', function(e) {
 			if (e.target.className == 'equalize') {
 				var result = original.equalize();
-				var lastChild = document.getElementsByClassName('success')[0].lastChild
-				if (lastChild) {
-					document.getElementsByClassName('success')[0].removeChild(lastChild);
-				}
-				document.getElementsByClassName('success')[0].appendChild(result.canvas);
-				document.getElementsByClassName('destination')[0].style.display = 'block';
-				var canvas = document.getElementById('success-chart');
-				canvas.parentNode.removeChild(canvas);
-				canvas = document.createElement('canvas');
-				canvas.setAttribute('id', 'success-chart');
-				canvas.setAttribute('width', 400);
-				canvas.setAttribute('height', 400);
-				document.getElementsByClassName('success-histogram')[0].appendChild(canvas);
-				var ctx = canvas.getContext('2d');
-				var data = {};
-				data.labels = [];
-				for (var i = 0; i < 256; ++i) {
-					data.labels[i] = i;
-				}
-				data.datasets = result.histogram;
-				drawHistogram(ctx, data);
+			} else if (e.target.className == 'informal-equalize') {
+				var result = original.informalEqualize();
+			} else {
+				return;
 			}
+			var lastChild = document.getElementsByClassName('success')[0].lastChild;
+			if (lastChild) {
+				document.getElementsByClassName('success')[0].removeChild(lastChild);
+			}
+			document.getElementsByClassName('success')[0].appendChild(result.canvas);
+			document.getElementsByClassName('destination')[0].style.display = 'block';
+			var canvas = document.getElementById('success-chart');
+			canvas.parentNode.removeChild(canvas);
+			canvas = document.createElement('canvas');
+			canvas.setAttribute('id', 'success-chart');
+			canvas.setAttribute('width', 400);
+			canvas.setAttribute('height', 400);
+			document.getElementsByClassName('success-histogram')[0].appendChild(canvas);
+			var ctx = canvas.getContext('2d');
+			var data = {};
+			data.labels = [];
+			for (var i = 0; i < 256; ++i) {
+				data.labels[i] = i;
+			}
+			data.datasets = result.histogram;
+			drawHistogram(ctx, data);
 		});
 		//滤波
 		Util.addHandler(document.getElementById('button-group-filting'), 'click', function(e) {
@@ -864,6 +934,22 @@
 			console.log((b - a) / 1000);
 			document.body.appendChild(result.canvas);
 		});
+
+		//添加噪声
+		Util.addHandler(document.getElementById('button-group-noise'), 'click', function(e) {
+			var saltPer = document.querySelector('#salt input').value,
+				pepperPer = document.querySelector('#pepper input').value,
+				mean = document.querySelectorAll('#gaussian input')[0].value,
+				standard = document.querySelectorAll('#gaussian input')[1].value;
+			if (e.target.id == 'salt-pepper') {
+				var result = original.addSaltPepperNoise(saltPer, pepperPer);
+			} else if (e.target.id == 'guassian-button') {
+				var result = original.addGaussianNoise(mean, standard);
+			} else {
+				return;
+			}
+			document.body.appendChild(result.canvas)
+		})
 
 	};
 

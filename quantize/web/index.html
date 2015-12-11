@@ -47,6 +47,28 @@
                     <button id="submit" type="button">提交</button>
                 </div>
             </div>
+            <div id="button-group-noise">
+                <h3>添加噪声</h3>
+                    <div class="salt-pepper">
+                        <div id="salt">
+                            <h4>盐噪声</h4>
+                            <span>概率：</span><input type="text" />
+                        </div>
+                        <div id="pepper">
+                            <h4>椒噪声</h4>
+                            <span>概率：</span><input type="text" />
+                        </div>
+                        <br>
+                        <button id="salt-pepper" type="button">提交</button>
+                    </div>
+                    <div id="gaussian">
+                        <h4>高斯噪声</h4>
+                        <span>均值：</span><input type="text" />
+                        <span>标准差：</span><input type="text" />
+                        <br>
+                        <button id="gaussian-button" type="button">提交</button>
+                    </div>
+            </div>
             <div id="button-group-filting">
                 <div class="arithmetic">
                     <h3>算术均值滤波(采用全1)</h3>
@@ -62,7 +84,7 @@
                 <div class="median">
                     <h3>中值滤波</h3>
                     <button type="button" data-size='3'>3*3</button>
-                    <button type="button" data-size='7'>7*7</button>
+                    <button type="button" data-size='5'>5*5</button>
                 </div>
                 <div class="max">
                     <h3>最大滤波</h3>
@@ -73,11 +95,6 @@
                     <h3>最小滤波</h3>
                     <button type="button" data-size='3'>3*3</button>
                     <button type="button" data-size='7'>7*7</button>
-                </div>
-                <div class="harmonic">
-                    <h3>调和均值滤波</h3>
-                    <button type="button" data-size='3'>3*3</button>
-                    <button type="button" data-size='9'>9*9</button>
                 </div>
                 <div class="harmonic">
                     <h3>调和均值滤波</h3>
@@ -105,8 +122,9 @@
                 <button type="button" data-level='2'>2</button>
             </div>
             <div id="button-group-equalize">
-                <h3>直方图均衡化</h3>
-                <button class="equalize" type="button">执行直方图均衡化</button>
+                <h3>直方图均衡化(基于亮度绘制)</h3>
+                <button class="equalize" type="button">均衡化(HSI)</button>
+                <button class="informal-equalize" type="button">均衡化(RGB)</button>
             </div>
             <div id="button-group-sharpen">
                 <h3>图像锐化</h3>

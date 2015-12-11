@@ -16,7 +16,7 @@
 }
 
 button {
-	margin-top: 5px;
+	margin-top: 10px;
 }
 
 .nothing {
@@ -49,13 +49,16 @@ button#submit {
 }
 
 
-
-
-#button-group-scale {
+#button-group-scale, #button-group-noise {
 	height: 200px;
 	border: 2px solid #888;
 	float: left;
 	padding-left: 10px;
+}
+
+#button-group-noise {
+	margin-left: 10px;
+	padding-right: 5px;
 }
 
 #button-group-fourier button, #button-group-sharpen button {
@@ -69,10 +72,28 @@ button#submit {
 	margin: 13px 0 5px 3px;
 }
 
+#button-group-noise div {
+	float: left;
+	border: 1px solid #888;
+	padding: 0 5px 5px 5px;
+	margin: 5px 0 5px 5px;
+}
+
 #button-group-gray {
 	clear: both;
 }
 
+#button-group-noise input {
+	width: 40px;
+}
+
+#button-group-noise span {
+	font-size: 12px;
+}
+
+h4 {
+	margin-top: 3px;
+}
 
 
 #button-group-gray, #button-group-equalize, #button-group-filting, #button-group-sharpen, #button-group-fourier {
