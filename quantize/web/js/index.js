@@ -316,9 +316,8 @@
 		},
 		//添加噪声
 		addSaltPepperNoise: function(salt, pepper) {
-			for (var i = 0; i < arguments.length; ++i) {
-				arguments[i] = arguments[i] == "" ? 0 : arguments[i];
-			}
+			salt = isNaN(salt) ? 0 : salt;
+			pepper = isNaN(pepper) ? 0 : pepper;
 			var width = this.width,
 				height = this.height,
 				resultMatrix = this.changeToMatrix(rawData),
@@ -340,10 +339,34 @@
 			}
 			return this.draw(resultMatrix, width, height);
 		},
+		//添加高斯噪声
+		addGaussianNoise: function(mean, standard) {
+			var count = 0;
+			mean = isNaN(mean) ? 0 : mean;
+			standard = isNaN(standard) ? 0 : standard;
+			var width = this.width,
+				height = this.height,
+				resultMatrix = this.changeToMatrix(rawData),
+				random, secondRandom, gaussianTemp, gaussianRandom;
+			for (var i = 0; i < height; ++i) {
+				for (var j = 0; j < width; ++j) {
+					for (var k = 0; k < 3; ++k) {
+						//均值为0，标准差为1的高斯随机数 (Box-Muller)
+						random = Math.random();
+						secondRandom = Math.random();
+						gaussianTemp = Math.sqrt(-2 * Math.log(random)) * Math.cos(2 * Math.PI * secondRandom);
+						//转换到均值为mean，标准差为standard的高斯随机数
+						gaussianRandom = gaussianTemp * standard + mean;
+						resultMatrix[i][4 * j + k] += gaussianRandom;
+					}
+				}
+			}
+			return this.draw(resultMatrix, width, height);
+		},
 		//中值滤波
 		medianFilting: function(size) {
 			var width = this.width, height = this.height;
-			var sum, resultMatrix = this.changeToHSI(), tempRow = [],
+			var sum, resultMatrix = this.changeToHSI(),
 				median = parseInt(size * size / 2);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
@@ -421,9 +444,6 @@
 							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
 							} else {
 								sum += 1 / this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
-								if (this.hsiData[i + k - 1][4 * (j + v - 1) + 2] == 0) {
-									console.log(sum);
-								}
 							}
 						}
 					}
@@ -437,7 +457,6 @@
 		contraHamonicFilting: function(size, q) {
 			var width = this.width, height = this.height
 			var sumUp, sumDown, resultMatrix = this.changeToHSI(), tempRow = [];
-			console.log(q);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
 					sumUp = 0;
@@ -937,13 +956,13 @@
 
 		//添加噪声
 		Util.addHandler(document.getElementById('button-group-noise'), 'click', function(e) {
-			var saltPer = document.querySelector('#salt input').value,
-				pepperPer = document.querySelector('#pepper input').value,
-				mean = document.querySelectorAll('#gaussian input')[0].value,
-				standard = document.querySelectorAll('#gaussian input')[1].value;
+			var saltPer = parseFloat(document.querySelector('#salt input').value),
+				pepperPer = parseFloat(document.querySelector('#pepper input').value),
+				mean = parseInt(document.querySelectorAll('#gaussian input')[0].value),
+				standard = parseInt(document.querySelectorAll('#gaussian input')[1].value);
 			if (e.target.id == 'salt-pepper') {
 				var result = original.addSaltPepperNoise(saltPer, pepperPer);
-			} else if (e.target.id == 'guassian-button') {
+			} else if (e.target.id == 'gaussian-button') {
 				var result = original.addGaussianNoise(mean, standard);
 			} else {
 				return;
