@@ -70,21 +70,42 @@
                     </div>
             </div>
             <div id="button-group-filting">
+                <div id="model">
+                    模型选择（RGB or HSI) 
+                    <select id="model-select">
+                        <option value=0 selected="selected">RGB</option>
+                        <option value=1>HSI</option>
+                    </select>
+                </div>
                 <div class="arithmetic">
                     <h3>算术均值滤波(采用全1)</h3>
                     <button type="button" data-size='3'>3*3</button>
-                    <button type="button" data-size='7'>7*7</button>
+                    <button type="button" data-size='5'>5*5</button>
                     <button type="button" data-size='9'>9*9</button>
                 </div>
                 <div class="geometric">
                     <h3>几何均值滤波</h3>
                     <button type="button" data-size='3'>3*3</button>
+                    <button type="button" data-size='5'>5*5</button>
                     <button type="button" data-size='9'>9*9</button>
                 </div>
                 <div class="median">
                     <h3>中值滤波</h3>
                     <button type="button" data-size='3'>3*3</button>
                     <button type="button" data-size='5'>5*5</button>
+                    <button type="button" data-size='7'>7*7</button>
+                </div>
+                <div class="adaptive-median">
+                    <h3>自适应中值滤波</h3>
+                    <button type="button" data-size='3'>3*3</button>
+                    <button type="button" data-size='5'>5*5</button>
+                    <button type="button" data-size='7'>7*7</button>
+                    <select id="max-value">
+                        <option value=7>max-size = 7</option>
+                        <option value=11>max-size = 11</option>
+                        <option value=11>max-size = 13</option>
+                        <option value=11>max-size = 15</option>
+                    </select>
                 </div>
                 <div class="max">
                     <h3>最大滤波</h3>
@@ -122,7 +143,7 @@
                 <button type="button" data-level='2'>2</button>
             </div>
             <div id="button-group-equalize">
-                <h3>直方图均衡化(基于亮度绘制)</h3>
+                <h3>直方图均衡化(基于亮度I)</h3>
                 <button class="equalize" type="button">均衡化(HSI)</button>
                 <button class="informal-equalize" type="button">均衡化(RGB)</button>
             </div>
@@ -132,7 +153,7 @@
                 <button id="rise" type="button">高提升滤波</button>
             </div>
             <div id="button-group-fourier">
-                <h3>傅立叶变换（支持彩色图片）</h3>
+                <h3>傅立叶变换（基于亮度I）</h3>
                 <button id="slow-dft" type="button">DFT(10分钟版)</button>
                 <button id="fast-dft" type="button">DFT(5秒钟版)</button>
                 <button id="slow-idft" type="button">IDFT(10分钟版)</button>

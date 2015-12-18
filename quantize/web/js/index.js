@@ -2,7 +2,7 @@
 
 	"use strict";
 
-	var original, canvas, context, left, top, lineW, strokeColor, rawData, mouseDown,
+	var original, canvas, context, left, top, lineW, strokeColor, rawData, mouseDown, model,
 		wrapper = document.getElementById('wrapper'),
 		first = document.getElementById('first'), 
 		second = document.getElementById('second'), 
@@ -288,30 +288,43 @@
 			}
 			return this.draw(resultMatrix, width, height);
 		},
-		//算术滤波
+		//算均值术滤波
 		filting: function(filter) {
 			if (typeof filter[0] === 'undefined' || filter.length !== filter[0].length) {
 				alert("传入的矩阵格式错误或者不是等行列，请换一个");
 				return;
 			}
 			var length = filter.length;
-			var width = this.width, height = this.height
-			var sum, resultMatrix = this.changeToHSI(), tempRow = [];
+			var width = this.width, height = this.height, half = parseInt(length / 2), sum;
+			//HSI模型仅对I处理,RGB则对三通道分别处理
+			var resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					sum = 0;
+					sum = model ? 0 : [0, 0, 0];
 					for (var k = 0; k < length; ++k) {
 						for (var v = 0; v < length; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 							} else {
-								sum += filter[k][v] * this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+								if (model) {
+									sum += filter[k][v] * this.hsiData[i + k - half][4 * (j + v - half) + 2];
+								} else {
+									sum[0] += filter[k][v] * this.matrixData[i + k - half][4 * (j + v - half)];
+									sum[1] += filter[k][v] * this.matrixData[i + k - half][4 * (j + v - half) + 1];
+									sum[2] += filter[k][v] * this.matrixData[i + k - half][4 * (j + v - half) + 2];
+								}
 							}
 						}
 					}
-					resultMatrix[i][4 * j + 2] = sum;
+					if (model) {
+						resultMatrix[i][4 * j + 2] = sum;
+					} else {
+						resultMatrix[i][4 * j] = sum[0];
+						resultMatrix[i][4 * j + 1] = sum[1];
+						resultMatrix[i][4 * j + 2] = sum[2];
+					}
 				}
 			}
-			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix
 			return this.draw(resultMatrix, width, height);
 		},
 		//添加噪声
@@ -365,136 +378,287 @@
 		},
 		//中值滤波
 		medianFilting: function(size) {
-			var width = this.width, height = this.height;
-			var sum, resultMatrix = this.changeToHSI(),
-				median = parseInt(size * size / 2);
+			var width = this.width, height = this.height, median = parseInt(size * size / 2), half = parseInt(size / 2);
+			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					sum = [];
+					sum = model ? [] : [[], [], []];
 					for (var k = 0; k < size; ++k) {
 						for (var v = 0; v < size; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
-								sum.push(0);
+							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
+								if (model) {
+									sum.push(0);
+								} else {
+									sum[0].push(0);
+									sum[1].push(0);
+									sum[2].push(0);
+								}
 							} else {
-								sum.push(this.hsiData[i + k - 1][4 * (j + v - 1) + 2]);
+								if (model) {
+									sum.push(this.hsiData[i + k - half][4 * (j + v - half) + 2]);
+								} else {
+									sum[0].push(this.matrixData[i + k - half][4 * (j + v - half)]);
+									sum[1].push(this.matrixData[i + k - half][4 * (j + v - half) + 1]);
+									sum[2].push(this.matrixData[i + k - half][4 * (j + v - half) + 2]);
+								}
 							}
 						}
 					}
-					sum.sort();
-					resultMatrix[i][4 * j + 2] = sum[median];
+					if (model) {
+						sum.sort();
+						resultMatrix[i][4 * j + 2] = sum[median];
+					} else {
+						for (var z = 0; z < 3; ++z) {
+							sum[z].sort();
+							resultMatrix[i][4 * j + z] = sum[z][median];
+						}
+					}
 				}
 			}
-			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix
+			return this.draw(resultMatrix, width, height);
+		},
+		//自适应中值滤波（使用WebWorker）
+		adaptiveMedian: function(size, maxSize) {
+			var width = this.width, height = this.height;
+			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData),
+				median = parseInt(size * size / 2), length = size * size, half = parseInt(size / 2), SIZE = size, pathSize = model ? 1 : 3;
+			for (var z = 0; z < pathSize; ++z) { 
+				for (var i = 0; i < height; ++i) {
+					for (var j = 0; j < width; ++j) {
+						sum = model ? [] : [[], [], []];
+						while (size <= maxSize) {
+							for (var k = 0; k < size; ++k) {
+								for (var v = 0; v < size; ++v) {
+									if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
+										if (model) {
+											sum.push(0);
+										} else {
+											sum[z].push(0);
+										}
+									} else {
+										if (model) {
+											sum.push(this.hsiData[i + k - half][4 * (j + v - half) + 2]);
+										} else {
+											sum[z].push(this.matrixData[i + k - half][4 * (j + v - half)]);
+										}
+									}
+								}
+							}
+							if (model) {
+								sum.sort();
+							} else {
+								sum[z].sort();
+							}
+							if (model) {
+								//A层（确定中值是否为脉冲）
+								//中值不是脉冲点时
+								if (sum[median] - sum[0] > 0 && sum[median] - sum[length - 1] < 0) {
+									//跳转B层
+									//原点不是脉冲点则保留原值
+									if (this.hsiData[i][4 * j + 2] - sum[0] > 0 && this.hsiData[i][4 * j + 2] - sum[length - 1] < 0) {
+										break; //跳出A层循环
+									} else {
+										//原点是脉冲点则输出中值
+										resultMatrix[i][4 * j + 2] = sum[median];
+										break;
+									}
+								} else {
+									size += 2;
+								}
+							} else {
+								if (sum[z][median] - sum[z][0] > 0 && sum[z][median] - sum[z][length - 1] < 0) {
+									if (this.matrixData[i][4 * j + 2] - sum[z][0] > 0 && this.matrixData[i][4 * j + 2] - sum[z][length - 1] < 0) {
+										break;
+									} else {
+										resultMatrix[i][4 * j + z] = sum[z][median];
+										break;
+									}
+								} else {
+									size += 2;
+								}
+							}
+						}
+						size = SIZE;
+					}
+				}
+			}
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix;
 			return this.draw(resultMatrix, width, height);
 		},
 		//最大滤波
 		maxFilting: function(size) {
 			var width = this.width, height = this.height;
-			var max, resultMatrix = this.changeToHSI(), tempRow = [],
-				median = parseInt(size * size / 2);
+			var max, resultMatrix = model ? this.changeToHSI(): this.changeToMatrix(rawData),
+				median = parseInt(size * size / 2), half = parseInt(size / 2);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					max = 0;
+					max = model ? 0 : [0, 0, 0];
 					for (var k = 0; k < size; ++k) {
 						for (var v = 0; v < size; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 							} else {
-								max = this.hsiData[i + k - 1][4 * (j + v - 1) + 2] > max ? this.hsiData[i + k - 1][4 * (j + v - 1) + 2] : max;
+								if (model) {
+									max = this.hsiData[i + k - half][4 * (j + v - half) + 2] > max ? this.hsiData[i + k - half][4 * (j + v - half) + 2] : max;
+								} else {
+									max[0] = this.matrixData[i + k - half][4 * (j + v - half)] > max[0] ? this.matrixData[i + k - half][4 * (j + v - half)] : max[0];
+									max[1] = this.matrixData[i + k - half][4 * (j + v - half) + 1] > max[1] ? this.matrixData[i + k - half][4 * (j + v - half) + 1] : max[1];
+									max[2] = this.matrixData[i + k - half][4 * (j + v - half) + 2] > max[2] ? this.matrixData[i + k - half][4 * (j + v - half) + 2] : max[2];
+								}
 							}
 						}
 					}
-					resultMatrix[i][4 * j + 2] = max;
+					if (model) {
+						resultMatrix[i][4 * j + 2] = max;
+					} else {
+						resultMatrix[i][4 * j] = max[0];
+						resultMatrix[i][4 * j + 1] = max[1];
+						resultMatrix[i][4 * j + 2] = max[2];
+					}
 				}
 			}
-			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix;
 			return this.draw(resultMatrix, width, height);
 		},
 		//最小滤波
 		minFilting: function(size) {
 			var width = this.width, height = this.height;
-			var min, resultMatrix = this.changeToHSI(), tempRow = [],
-				median = parseInt(size * size / 2);
+			var min, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData),
+				median = parseInt(size * size / 2), half = parseInt(size / 2);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					min= Infinity;
+					min = model ? Infinity : [Infinity, Infinity, Infinity];
 					for (var k = 0; k < size; ++k) {
 						for (var v = 0; v < size; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
-								min = 0;
+							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
+								if (model) {
+									min = 0;
+								} else {
+									min = [0, 0, 0];
+								}
 							} else {
-								min = this.hsiData[i + k - 1][4 * (j + v - 1) + 2] < min ? this.hsiData[i + k - 1][4 * (j + v - 1) + 2] : min;
+								if (model) {
+									min = this.hsiData[i + k - half][4 * (j + v - half) + 2] < min ? this.hsiData[i + k - half][4 * (j + v - half) + 2] : min;
+								} else {
+									min[0] = this.matrixData[i + k - half][4 * (j + v - half)] < min[0] ? this.matrixData[i + k - half][4 * (j + v - half)] : min[0];
+									min[1] = this.matrixData[i + k - half][4 * (j + v - half) + 1] < min[1] ? this.matrixData[i + k - half][4 * (j + v - half) + 1] : min[1];
+									min[2] = this.matrixData[i + k - half][4 * (j + v - half) + 2] < min[2] ? this.matrixData[i + k - half][4 * (j + v - half) + 2] : min[2];
+								}
 							}
 						}
 					}
-					resultMatrix[i][4 * j + 2] = min;
+					if (model) {
+						resultMatrix[i][4 * j + 2] = min;
+					} else {
+						resultMatrix[i][4 * j] = min[0];
+						resultMatrix[i][4 * j + 1] = min[1];
+						resultMatrix[i][4 * j + 2] = min;
+					}
 				}
 			}
-			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix;
 			return this.draw(resultMatrix, width, height);
 		},
 		//调和均值滤波
 		hamonicFilting: function(size) {
 			var width = this.width, height = this.height
-			var sum, resultMatrix = this.changeToHSI(), tempRow = [];
+			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half = parseInt(size / 2);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					sum = 0;
+					sum = model ? 0 : [0, 0, 0];
 					for (var k = 0; k < size; ++k) {
 						for (var v = 0; v < size; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 							} else {
-								sum += 1 / this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+								if (model) {
+									sum += 1 / this.hsiData[i + k - half][4 * (j + v - half) + 2];
+								} else {
+									sum[0] += 1 / this.matrixData[i + k - half][4 * (j + v - half)];
+									sum[1] += 1 / this.matrixData[i + k - half][4 * (j + v - half) + 1];
+									sum[2] += 1 / this.matrixData[i + k - half][4 * (j + v - half) + 2];
+								}
 							}
 						}
 					}
-					resultMatrix[i][4 * j + 2] = size * size / sum;
+					if (model) {
+						resultMatrix[i][4 * j + 2] = size * size / sum;
+					} else {
+						resultMatrix[i][4 * j] = size * size / sum[0];
+						resultMatrix[i][4 * j + 1] = size * size / sum[1];
+						resultMatrix[i][4 * j + 2] = size * size / sum[2];
+					}
 				}
 			}
-			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix;
 			return this.draw(resultMatrix, width, height);
 		},
 		//反调和均值滤波
 		contraHamonicFilting: function(size, q) {
 			var width = this.width, height = this.height
-			var sumUp, sumDown, resultMatrix = this.changeToHSI(), tempRow = [];
+			var sumUp, sumDown, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half = parseInt(size / 2);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					sumUp = 0;
-					sumDown = 0;
+					sumUp = model ? 0 : [0, 0, 0];
+					sumDown = model ? 0 : [0, 0, 0];
 					for (var k = 0; k < size; ++k) {
 						for (var v = 0; v < size; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 							} else {
-								sumUp += Math.pow(this.hsiData[i + k - 1][4 * (j + v - 1) + 2], q + 1);
-								sumDown += Math.pow(this.hsiData[i + k - 1][4 * (j + v - 1) + 2], q);
+								if (model) {
+									sumUp += Math.pow(this.hsiData[i + k - half][4 * (j + v - half) + 2], q + 1);
+									sumDown += Math.pow(this.hsiData[i + k - half][4 * (j + v - half) + 2], q);
+								} else {
+									for (var z = 0; z < 3; ++z) {
+										sumUp[z] += Math.pow(this.matrixData[i + k - half][4 * (j + v - half) + z], q + 1);
+										sumDown[z] += Math.pow(this.matrixData[i + k - half][4 * (j + v - half) + z], q);
+									}
+								}
 							}
 						}
 					}
-					resultMatrix[i][4 * j + 2] = sumUp / sumDown;
+					if (model) {
+						resultMatrix[i][4 * j + 2] = sumUp / sumDown;
+					} else {
+						resultMatrix[i][4 * j] = sumUp[0] / sumDown[0];
+						resultMatrix[i][4 * j + 1] = sumUp[1] / sumDown[1];
+						resultMatrix[i][4 * j + 2] = sumUp[2] / sumDown[2];
+					}
 				}
 			}
-			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix;
 			return this.draw(resultMatrix, width, height);
 		},
 		//几何均值滤波
 		geometricFilting: function(size) {
 			var width = this.width, height = this.height;
-			var sum, resultMatrix = this.changeToHSI(), tempRow = [];
+			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half = parseInt(size / 2);
 			for (var i = 0; i < height; ++i) {
 				for (var j = 0; j < width; ++j) {
-					sum = 1;
+					sum = model ? 1 : [1, 1, 1];
 					for (var k = 0; k < size; ++k) {
 						for (var v = 0; v < size; ++v) {
-							if (i + k - 1 < 0 || j + v - 1 < 0 || i + k - 1 > height - 1 || j + v - 1 > width - 1) {
+							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 							} else {
-								sum *= this.hsiData[i + k - 1][4 * (j + v - 1) + 2];
+								if (model) {
+									sum *= this.hsiData[i + k - half][4 * (j + v - half) + 2];
+								} else {
+									sum[0] *= this.matrixData[i + k - half][4 * (j + v - half)];
+									sum[1] *= this.matrixData[i + k - half][4 * (j + v - half) + 1];
+									sum[2] *= this.matrixData[i + k - half][4 * (j + v - half) + 2];
+								}
 							}
 						}
 					}
-					resultMatrix[i][4 * j + 2] = Math.pow(sum, 1 / (size * size));
+					if (model) {
+						resultMatrix[i][4 * j + 2] = Math.pow(sum, 1 / (size * size));
+					} else {
+						resultMatrix[i][4 * j] = Math.pow(sum[0], 1 / (size * size));
+						resultMatrix[i][4 * j + 1] = Math.pow(sum[1], 1 / (size * size));
+						resultMatrix[i][4 * j + 2] = Math.pow(sum[2], 1 / (size * size));
+					}
 				}
 			}
-			resultMatrix = this.restoreToRGB(resultMatrix, width, height);
+			resultMatrix = model ? this.restoreToRGB(resultMatrix, width, height) : resultMatrix;
 			return this.draw(resultMatrix, width, height);
 		},
 		//频谱域滤波
@@ -503,8 +667,7 @@
 				width = this.width,
 				height = this.height,
 				result, tempDataReal, tempDataImag, real, imag, sumReal, sumImag, matrixReal, matrixImag,
-				resultMatrix,
-				tempRow = [], fourierData, mn = width * height,
+				resultMatrix, fourierData, mn = width * height,
 				paddingWidth = width + length,
 				paddingHeight = height + length, temp;
 			filter = Util.paddingZero(filter, paddingWidth, paddingHeight);
@@ -878,6 +1041,8 @@
 		Util.addHandler(document.getElementById('button-group-filting'), 'click', function(e) {
 			var button = e.target, size = parseInt(button.getAttribute('data-size')),
 				buttonParentName = button.parentNode.className;
+			var modelIndex = document.getElementById('model-select').selectedIndex;
+			model = parseInt(document.getElementById('model-select').options[modelIndex].value);
 			if (button.tagName.toLowerCase() !== 'button') {
 				return;
 			}
@@ -898,6 +1063,10 @@
 				var result = original.maxFilting(size);
 			} else if (buttonParentName == 'min') {
 				var result = original.minFilting(size);
+			} else if (buttonParentName == 'adaptive-median') {
+				var index = document.getElementById('max-value').selectedIndex;
+				var q = document.getElementById('max-value').options[index].value;
+				var result = original.adaptiveMedian(size, parseInt(q));
 			}
 			document.body.appendChild(result.canvas);
 		});
