@@ -380,38 +380,23 @@
 		medianFilting: function(size) {
 			var width = this.width, height = this.height, median = parseInt(size * size / 2), half = parseInt(size / 2);
 			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData);
-			for (var i = 0; i < height; ++i) {
-				for (var j = 0; j < width; ++j) {
-					sum = model ? [] : [[], [], []];
-					for (var k = 0; k < size; ++k) {
-						for (var v = 0; v < size; ++v) {
-							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
-								if (model) {
+			var pathSize = model ? 1 : 3, tempMatrix = model ? this.hsiData : this.matrixData, tempZ;
+			for (var z = 0; z < pathSize; ++z) {
+				tempZ = model ? 2 : z;
+				for (var i = 0; i < height; ++i) {
+					for (var j = 0; j < width; ++j) {
+						sum = [];
+						for (var k = 0; k < size; ++k) {
+							for (var v = 0; v < size; ++v) {
+								if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 									sum.push(0);
 								} else {
-									sum[0].push(0);
-									sum[1].push(0);
-									sum[2].push(0);
-								}
-							} else {
-								if (model) {
-									sum.push(this.hsiData[i + k - half][4 * (j + v - half) + 2]);
-								} else {
-									sum[0].push(this.matrixData[i + k - half][4 * (j + v - half)]);
-									sum[1].push(this.matrixData[i + k - half][4 * (j + v - half) + 1]);
-									sum[2].push(this.matrixData[i + k - half][4 * (j + v - half) + 2]);
+									sum.push(tempMatrix[i + k - half][4 * (j + v - half) + tempZ]);
 								}
 							}
 						}
-					}
-					if (model) {
 						sum.sort();
-						resultMatrix[i][4 * j + 2] = sum[median];
-					} else {
-						for (var z = 0; z < 3; ++z) {
-							sum[z].sort();
-							resultMatrix[i][4 * j + z] = sum[z][median];
-						}
+						resultMatrix[i][4 * j + tempZ] = sum[median];
 					}
 				}
 			}
@@ -421,65 +406,44 @@
 		//自适应中值滤波（使用WebWorker）
 		adaptiveMedian: function(size, maxSize) {
 			var width = this.width, height = this.height;
-			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData),
-				median = parseInt(size * size / 2), length = size * size, half = parseInt(size / 2), SIZE = size, pathSize = model ? 1 : 3;
+			var pathSize = model ? 1 : 3, tempMatrix = model ? this.hsiData : this.matrixData, tempZ;
+			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half,
+				median = parseInt(size * size / 2), length = size * size, HALF = parseInt(size / 2), SIZE = size;
 			for (var z = 0; z < pathSize; ++z) { 
+				tempZ = model ? 2 : z;
 				for (var i = 0; i < height; ++i) {
 					for (var j = 0; j < width; ++j) {
-						sum = model ? [] : [[], [], []];
+						sum = [];
 						while (size <= maxSize) {
+							half = parseInt(size / 2);
 							for (var k = 0; k < size; ++k) {
 								for (var v = 0; v < size; ++v) {
 									if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
-										if (model) {
-											sum.push(0);
-										} else {
-											sum[z].push(0);
-										}
+										sum.push(0);
 									} else {
-										if (model) {
-											sum.push(this.hsiData[i + k - half][4 * (j + v - half) + 2]);
-										} else {
-											sum[z].push(this.matrixData[i + k - half][4 * (j + v - half)]);
-										}
+										sum.push(tempMatrix[i + k - half][4 * (j + v - half) + tempZ]);
 									}
 								}
 							}
-							if (model) {
-								sum.sort();
-							} else {
-								sum[z].sort();
-							}
-							if (model) {
-								//A层（确定中值是否为脉冲）
-								//中值不是脉冲点时
-								if (sum[median] - sum[0] > 0 && sum[median] - sum[length - 1] < 0) {
-									//跳转B层
-									//原点不是脉冲点则保留原值
-									if (this.hsiData[i][4 * j + 2] - sum[0] > 0 && this.hsiData[i][4 * j + 2] - sum[length - 1] < 0) {
-										break; //跳出A层循环
-									} else {
-										//原点是脉冲点则输出中值
-										resultMatrix[i][4 * j + 2] = sum[median];
-										break;
-									}
+							sum.sort();
+							//A层（确定中值是否为脉冲）
+							//中值不是脉冲点时
+							if (sum[median] - sum[0] > 0 && sum[median] - sum[length - 1] < 0) {
+								//跳转B层
+								//原点不是脉冲点则保留原值
+								if (tempMatrix[i][4 * j + tempZ] - sum[0] > 0 && tempMatrix[i][4 * j + tempZ] - sum[length - 1] < 0) {
+									break; //跳出A层循环
 								} else {
-									size += 2;
+									//原点是脉冲点则输出中值
+									resultMatrix[i][4 * j + tempZ] = sum[median];
+									break;
 								}
 							} else {
-								if (sum[z][median] - sum[z][0] > 0 && sum[z][median] - sum[z][length - 1] < 0) {
-									if (this.matrixData[i][4 * j + 2] - sum[z][0] > 0 && this.matrixData[i][4 * j + 2] - sum[z][length - 1] < 0) {
-										break;
-									} else {
-										resultMatrix[i][4 * j + z] = sum[z][median];
-										break;
-									}
-								} else {
-									size += 2;
-								}
+								size += 2;
 							}
 						}
 						size = SIZE;
+						half = HALF;
 					}
 				}
 			}
@@ -525,34 +489,22 @@
 			var width = this.width, height = this.height;
 			var min, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData),
 				median = parseInt(size * size / 2), half = parseInt(size / 2);
-			for (var i = 0; i < height; ++i) {
-				for (var j = 0; j < width; ++j) {
-					min = model ? Infinity : [Infinity, Infinity, Infinity];
-					for (var k = 0; k < size; ++k) {
-						for (var v = 0; v < size; ++v) {
-							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
-								if (model) {
+			var pathSize = model ? 1 : 3, tempMatrix = model ? this.hsiData : this.matrixData, tempZ;
+			for (var z = 0; z < pathSize; ++z) {
+				tempZ = model ? 2 : z;
+				for (var i = 0; i < height; ++i) {
+					for (var j = 0; j < width; ++j) {
+						min = Infinity;
+						for (var k = 0; k < size; ++k) {
+							for (var v = 0; v < size; ++v) {
+								if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 									min = 0;
 								} else {
-									min = [0, 0, 0];
-								}
-							} else {
-								if (model) {
-									min = this.hsiData[i + k - half][4 * (j + v - half) + 2] < min ? this.hsiData[i + k - half][4 * (j + v - half) + 2] : min;
-								} else {
-									min[0] = this.matrixData[i + k - half][4 * (j + v - half)] < min[0] ? this.matrixData[i + k - half][4 * (j + v - half)] : min[0];
-									min[1] = this.matrixData[i + k - half][4 * (j + v - half) + 1] < min[1] ? this.matrixData[i + k - half][4 * (j + v - half) + 1] : min[1];
-									min[2] = this.matrixData[i + k - half][4 * (j + v - half) + 2] < min[2] ? this.matrixData[i + k - half][4 * (j + v - half) + 2] : min[2];
+									min = tempMatrix[i + k - half][4 * (j + v - half) + tempZ] < min ? tempMatrix[i + k - half][4 * (j + v - half) + tempZ] : min;
 								}
 							}
 						}
-					}
-					if (model) {
-						resultMatrix[i][4 * j + 2] = min;
-					} else {
-						resultMatrix[i][4 * j] = min[0];
-						resultMatrix[i][4 * j + 1] = min[1];
-						resultMatrix[i][4 * j + 2] = min;
+						resultMatrix[i][4 * j + tempZ] = min;
 					}
 				}
 			}
@@ -561,31 +513,23 @@
 		},
 		//调和均值滤波
 		hamonicFilting: function(size) {
-			var width = this.width, height = this.height
+			var width = this.width, height = this.height, pathSize = model ? 1 : 3;
+			var tempMatrix = model ? this.hsiData : this.matrixData, tempZ;
 			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half = parseInt(size / 2);
-			for (var i = 0; i < height; ++i) {
-				for (var j = 0; j < width; ++j) {
-					sum = model ? 0 : [0, 0, 0];
-					for (var k = 0; k < size; ++k) {
-						for (var v = 0; v < size; ++v) {
-							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
-							} else {
-								if (model) {
-									sum += 1 / this.hsiData[i + k - half][4 * (j + v - half) + 2];
+			for (var z = 0; z < pathSize; ++z) {
+				tempZ = model ? 2 : z;
+				for (var i = 0; i < height; ++i) {
+					for (var j = 0; j < width; ++j) {
+						sum = 0;
+						for (var k = 0; k < size; ++k) {
+							for (var v = 0; v < size; ++v) {
+								if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 								} else {
-									sum[0] += 1 / this.matrixData[i + k - half][4 * (j + v - half)];
-									sum[1] += 1 / this.matrixData[i + k - half][4 * (j + v - half) + 1];
-									sum[2] += 1 / this.matrixData[i + k - half][4 * (j + v - half) + 2];
+									sum += 1 / tempMatrix[i + k - half][4 * (j + v - half) + tempZ];
 								}
 							}
 						}
-					}
-					if (model) {
-						resultMatrix[i][4 * j + 2] = size * size / sum;
-					} else {
-						resultMatrix[i][4 * j] = size * size / sum[0];
-						resultMatrix[i][4 * j + 1] = size * size / sum[1];
-						resultMatrix[i][4 * j + 2] = size * size / sum[2];
+						resultMatrix[i][4 * j + tempZ] = size * size / sum;
 					}
 				}
 			}
@@ -594,34 +538,25 @@
 		},
 		//反调和均值滤波
 		contraHamonicFilting: function(size, q) {
-			var width = this.width, height = this.height
-			var sumUp, sumDown, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half = parseInt(size / 2);
-			for (var i = 0; i < height; ++i) {
-				for (var j = 0; j < width; ++j) {
-					sumUp = model ? 0 : [0, 0, 0];
-					sumDown = model ? 0 : [0, 0, 0];
-					for (var k = 0; k < size; ++k) {
-						for (var v = 0; v < size; ++v) {
-							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
-							} else {
-								if (model) {
-									sumUp += Math.pow(this.hsiData[i + k - half][4 * (j + v - half) + 2], q + 1);
-									sumDown += Math.pow(this.hsiData[i + k - half][4 * (j + v - half) + 2], q);
+			var width = this.width, height = this.height;
+			var sumUp, sumDown, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half = parseInt(size / 2), pathSize = model ? 1 : 3;
+			var tempMatrix = model ? this.hsiData : this.matrixData, tempZ;
+			for (var z = 0; z < pathSize; ++z) {
+				tempZ = model ? 2 : z;
+				for (var i = 0; i < height; ++i) {
+					for (var j = 0; j < width; ++j) {
+						sumUp = 0;
+						sumDown = 0;
+						for (var k = 0; k < size; ++k) {
+							for (var v = 0; v < size; ++v) {
+								if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 								} else {
-									for (var z = 0; z < 3; ++z) {
-										sumUp[z] += Math.pow(this.matrixData[i + k - half][4 * (j + v - half) + z], q + 1);
-										sumDown[z] += Math.pow(this.matrixData[i + k - half][4 * (j + v - half) + z], q);
-									}
+									sumUp += Math.pow(tempMatrix[i + k - half][4 * (j + v - half) + tempZ], q + 1);
+									sumDown += Math.pow(tempMatrix[i + k - half][4 * (j + v - half) + tempZ], q);
 								}
 							}
 						}
-					}
-					if (model) {
-						resultMatrix[i][4 * j + 2] = sumUp / sumDown;
-					} else {
-						resultMatrix[i][4 * j] = sumUp[0] / sumDown[0];
-						resultMatrix[i][4 * j + 1] = sumUp[1] / sumDown[1];
-						resultMatrix[i][4 * j + 2] = sumUp[2] / sumDown[2];
+						resultMatrix[i][4 * j + tempZ] = sumUp / sumDown;
 					}
 				}
 			}
@@ -631,30 +566,22 @@
 		//几何均值滤波
 		geometricFilting: function(size) {
 			var width = this.width, height = this.height;
+			var pathSize = model ? 1 : 3, tempMatrix = model ? this.hsiData : this.matrixData, tempZ;
 			var sum, resultMatrix = model ? this.changeToHSI() : this.changeToMatrix(rawData), half = parseInt(size / 2);
-			for (var i = 0; i < height; ++i) {
-				for (var j = 0; j < width; ++j) {
-					sum = model ? 1 : [1, 1, 1];
-					for (var k = 0; k < size; ++k) {
-						for (var v = 0; v < size; ++v) {
-							if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
-							} else {
-								if (model) {
-									sum *= this.hsiData[i + k - half][4 * (j + v - half) + 2];
+			for (var z = 0; z < pathSize; ++z) {
+				tempZ = model ? 2 : z;
+				for (var i = 0; i < height; ++i) {
+					for (var j = 0; j < width; ++j) {
+						sum = 1;
+						for (var k = 0; k < size; ++k) {
+							for (var v = 0; v < size; ++v) {
+								if (i + k - half < 0 || j + v - half < 0 || i + k - half > height - 1 || j + v - half > width - 1) {
 								} else {
-									sum[0] *= this.matrixData[i + k - half][4 * (j + v - half)];
-									sum[1] *= this.matrixData[i + k - half][4 * (j + v - half) + 1];
-									sum[2] *= this.matrixData[i + k - half][4 * (j + v - half) + 2];
+									sum *= tempMatrix[i + k - half][4 * (j + v - half) + tempZ];
 								}
 							}
 						}
-					}
-					if (model) {
-						resultMatrix[i][4 * j + 2] = Math.pow(sum, 1 / (size * size));
-					} else {
-						resultMatrix[i][4 * j] = Math.pow(sum[0], 1 / (size * size));
-						resultMatrix[i][4 * j + 1] = Math.pow(sum[1], 1 / (size * size));
-						resultMatrix[i][4 * j + 2] = Math.pow(sum[2], 1 / (size * size));
+						resultMatrix[i][4 * j + tempZ] = Math.pow(sum, 1 / (size * size));
 					}
 				}
 			}
