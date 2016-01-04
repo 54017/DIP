@@ -788,6 +788,60 @@
 		fft: function() {
 
 		},
+		//像素化
+		pixelate: function() {
+			var windowSize = 6,   //窗口大小2*2
+				height = this.height,
+				width = this.width,
+				canvas = document.createElement('canvas');
+			canvas.width = width;
+			canvas.height = height;
+			canvas.id = 'stage';
+			document.body.appendChild(canvas);
+			stage = new createjs.Stage('stage');
+			var resultMatrix = this.changeToMatrix(rawData);
+			for (var k = 0; k < 3; ++k) {
+				for (var i = 0; i < height - windowSize; i += windowSize) {
+					var sum = 0
+					for (var j = 0; j < width - windowSize; j += windowSize) {
+						for (var v = 0; v < windowSize; ++v) {
+							for (var t = 0; t < windowSize; ++t) {
+								sum += this.matrixData[i + v][4 * (j + t) + k];
+							}
+						}
+						sum = sum/(windowSize * windowSize);
+						for (var v = 0; v < windowSize; ++v) {
+							for (var t = 0; t < windowSize; ++t) {
+								resultMatrix[i + v][4 * (j + t) + k] = sum;
+							}
+						}
+					}
+				}
+			}
+			//将像素化的图画出来
+			var space = windowSize / 2;
+			for(var i = 0; i < height - windowSize; i += windowSize) {
+				for (j = 0; j < width - windowSize; j += windowSize) {
+					var circle = new createjs.Shape(),
+		            	radius = Math.sqrt(windowSize * windowSize) / 2,
+		            	x = i + space,
+		            	y = j + space,
+		            	r = parseInt(resultMatrix[i][4 * j]),
+		            	g = parseInt(resultMatrix[i][4 * j + 1]),
+		            	b = parseInt(resultMatrix[i][4 * j + 2]),
+		            	color = "rgba(" + r + ", " + g + ", " + b + ", " + 1 + ")";
+		            if (resultMatrix[i][4 * j + 3] == 0) {
+		            	continue;
+		            }
+		         	circle.radius = r;
+		            circle.graphics.beginFill(color).drawCircle(0, 0, radius);
+		            circle.x = y;
+		            circle.y = x;
+		            stage.addChild(circle);
+				}
+        	}
+        	stage.update();
+		},
 		//返回canvas元素
 		draw: function(matrix, width, height) {
 			var canvas = document.createElement('canvas');
@@ -1010,6 +1064,15 @@
 			var filter = Util.createAveragingFilter(3),
 				result = original.rise(filter);
 			document.body.appendChild(result.canvas);
+		});
+
+		//图像特效
+		Util.addHandler(document.getElementById('button-group-special'), 'click', function(e) {
+			var bt = e.target.id;
+			if (bt == 'pixel') {
+				console.log("xxxxxx");
+				var result = original.pixelate();
+			}
 		});
 
 		//傅立叶变换
