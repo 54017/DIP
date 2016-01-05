@@ -23,7 +23,7 @@
 		} catch(e) {
 			console.log(e);
 		}
-		var windowSize = 6,
+		var windowSize = 4,
 			matrixData = changeToMatrix(rawData, height, width),
 			resultMatrix = changeToMatrix(rawData, height, width);
 		for (var k = 0; k < 3; ++k) {
@@ -113,7 +113,9 @@
     }
 
     var formText = function(words) {
-    	var text = new createjs.Text(words, "50px 'Source Sans Pro'", "green");
+    	var text = new createjs.Text(words, "70px 'Source Sans Pro'", "green");
+    	text.textAlign = 'center';
+    	text.x = 350/2;
         textStage.addChild(text);
         textStage.update();
         var count = 0;
@@ -124,6 +126,7 @@
         var pix = context.getImageData(0, 0, width, height).data;
        	var matrixData = changeToMatrix(pix, height, width);
         var textPixels = [];
+        console.log(width)
         var offsetX = (window.innerWidth - width)/2,
 			offsetY = (window.innerHeight - height)/2;
 		var windowSize = 4, space = windowSize / 2;
@@ -143,12 +146,14 @@
 	         	circles[count].radius = r;
 	            circles[count].graphics.beginFill(color);
 	            
-	            circles[count].originX = originX + offsetLeft;
-	            circles[count].originY = originY + offsetTop;
+	            circles[count].originX = originX + offsetX;
+	            circles[count].originY = originY + offsetY;
 	            tweenCircle(circles[count], 'in')
 			}
     	}
-      
+      	for (var i = count + 1; i < circles.length; ++i) {
+      		TweenLite.to(circles[i], 0.4, {alpha: 0.1})
+      	}
     }
 
 	var init = function() {
