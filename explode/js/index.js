@@ -152,7 +152,8 @@
 			}
     	}
       	for (var i = count + 1; i < circles.length; ++i) {
-      		TweenLite.to(circles[i], 0.4, {alpha: 0.1})
+      		circles[i].tween.kill();
+      		TweenLite.to(circles[i], 0.4, {alpha: 0});
       	}
     }
 
