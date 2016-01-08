@@ -793,7 +793,7 @@
 			var windowSize = 6,   //窗口大小6*6
 				height = this.height,
 				width = this.width;
-			stage = new createjs.Stage('stage');
+			var stage = new createjs.Stage('stage');
 			var resultMatrix = this.changeToMatrix(rawData);
 			for (var k = 0; k < 3; ++k) {
 				for (var i = 0; i < height - windowSize; i += windowSize) {
