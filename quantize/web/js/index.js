@@ -1070,7 +1070,9 @@
 				canvas.height = original.height;
 				canvas.id = 'stage';
 				document.body.appendChild(canvas);
-				var result = original.pixelate();
+				setTimeout(function() {
+					original.pixelate();
+				}, 100);
 			}
 		});
 
