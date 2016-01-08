@@ -1,4 +1,4 @@
-importScripts('Util.js')
+importScripts('util.js')
 
 onmessage = function(e) {
 	var startTime = new Date();
