@@ -790,14 +790,9 @@
 		},
 		//像素化
 		pixelate: function() {
-			var windowSize = 6,   //窗口大小2*2
+			var windowSize = 6,   //窗口大小6*6
 				height = this.height,
-				width = this.width,
-				canvas = document.createElement('canvas');
-			canvas.width = width;
-			canvas.height = height;
-			canvas.id = 'stage';
-			document.body.appendChild(canvas);
+				width = this.width;
 			stage = new createjs.Stage('stage');
 			var resultMatrix = this.changeToMatrix(rawData);
 			for (var k = 0; k < 3; ++k) {
@@ -1070,7 +1065,11 @@
 		Util.addHandler(document.getElementById('button-group-special'), 'click', function(e) {
 			var bt = e.target.id;
 			if (bt == 'pixel') {
-				console.log("xxxxxx");
+				var canvas = document.createElement('canvas');
+				canvas.width = original.width;
+				canvas.height = original.height;
+				canvas.id = 'stage';
+				document.body.appendChild(canvas);
 				var result = original.pixelate();
 			}
 		});

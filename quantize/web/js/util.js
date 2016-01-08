@@ -10,6 +10,17 @@ Util = (function() {
         }
     }
 
+    var changeToMatrix = function(rawData, width, height) {
+        //转化为常见的矩阵形式（RGBA矩阵每行是4*width个）
+        var b = [];
+        var tempStart, num = 4 * width;
+        for (var i = 0; i < height; ++i) {
+            tempStart = i * num;
+            b[i] = Array.prototype.slice.call(rawData, tempStart, tempStart + num);
+        }
+        return b;
+    }
+
     //全1均值滤波器
     var createAveragingFilter = function(size) {
         var filter = [],
@@ -135,7 +146,8 @@ Util = (function() {
         multiply: multiply,
         fillZeroForComplex: fillZeroForComplex,
         fastIdft: fastIdft,
-        paddingZero: paddingZero
+        paddingZero: paddingZero,
+        changeToMatrix: changeToMatrix
     }
 
 }());

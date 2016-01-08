@@ -62,8 +62,11 @@
 			rightWidth = rightImage.width,
 			rightHeight = rightImage.height,
 			leftData = leftCtx.getImageData(0, 0, leftWidth, leftHeight),
-			rightData = rightCtx.getImageData(0, 0, rightWidth, rightHeight);
-		worker.postMessage([leftData, rightData]);
+			rightData = rightCtx.getImageData(0, 0, rightWidth, rightHeight),
+			sizeSelector = document.getElementById('window-size');
+		var windowSize = sizeSelector.options[sizeSelector.selectedIndex].value;
+		console.log(windowSize);
+		worker.postMessage([leftData, rightData, windowSize]);
 		worker.onmessage = function(e) {
 			var canvasLeft = draw(e.data[0], leftWidth, leftHeight);
 			document.body.appendChild(canvasLeft);
